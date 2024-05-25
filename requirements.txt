@@ -1,0 +1,10 @@
+asyncio==3.4.3
+-e git+ssh://git@baltig.infn.it/infn-epics/infn-ophyd-hal.git@d8824a3a09a08600d6b185f7da8d1539cd5b4e0a#egg=infn_ophyd_hal
+networkx==3.3
+numpy==1.26.4
+ophyd==1.9.0
+packaging==24.0
+Pint==0.23
+pyepics==3.5.2
+pyparsing==3.1.2
+typing_extensions==4.12.0
