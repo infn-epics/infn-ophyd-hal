@@ -26,7 +26,7 @@ POS_TOLERANCE = 10
 class OphydTmlMotor(Device, PositionerBase):
     
     mot_msta = Cpt(EpicsSignalRO, ":MSTA")
-    mot_stat = Cpt(EpicsSignal, ":STAT")
+    mot_stat = Cpt(EpicsSignalRO, ":STAT")
     user_readback = Cpt(EpicsSignalRO, ":RBV")
     mot_msgs = Cpt(EpicsSignal, ":MSGS")
     mot_act_sp = Cpt(EpicsSignal, ":ACT")
@@ -60,7 +60,7 @@ class OphydTmlMotor(Device, PositionerBase):
                          name=name, parent=parent, **kwargs)
         self.poi = poi
         self.user_readback.name = self.name
-        self.mot_stat.subscribe(self._on_mot_stat_change)
+        # self.mot_stat.subscribe(self._on_mot_stat_change)
         self.user_readback.subscribe(self._on_user_readback_change)
         self.mot_msta.subscribe(self._on_mot_msta_change)
 
@@ -84,7 +84,7 @@ class OphydTmlMotor(Device, PositionerBase):
     def __del__(self):
         '''Destructor to handle any necessary cleanup.'''
         logger.debug(f"Cleaning up {self.name}")
-        self.mot_stat.unsubscribe(self._on_mot_stat_change)
+        # self.mot_stat.unsubscribe(self._on_mot_stat_change)
         self.user_readback.unsubscribe(self._on_user_readback_change)
         self.mot_msta.unsubscribe(self._on_mot_msta_change)
         
@@ -113,6 +113,7 @@ class OphydTmlMotor(Device, PositionerBase):
                     self.mot_msgs.put("STOP")
                     time.sleep(1) 
                     self.mot_msgs.put("START")
+                return
             except Exception as e:
                 logger.warning(f"ENABLE Attempt {attempt} failed with error: {e}")
                 self.mot_msgs.put("STOP")
@@ -145,14 +146,14 @@ class OphydTmlMotor(Device, PositionerBase):
         return status
 
     def iserror(self):
-        return (self.mot_msta_value & (1 << 0x9)) != 0
+        return (self.mot_msta.get() & (1 << 0x9)) != 0
 
     def ishomed(self):
-        return (self.mot_msta_value & (1 << 0xE)) != 0
+        return (self.mot_msta.get() & (1 << 0xE)) != 0
 
     def limit(self):
-        lsn = self.mot_msta_value & (1 << 0xD)
-        lsp = self.mot_msta_value & (1 << 2)
+        lsn = self.mot_msta.get() & (1 << 0xD)
+        lsp = self.mot_msta.get() & (1 << 2)
         if lsn:
             return -1
         if lsp:
@@ -162,7 +163,7 @@ class OphydTmlMotor(Device, PositionerBase):
         return 0
     
     def dir(self):
-        return self.mot_msta_value & 0x1
+        return self.mot_msta.get() & 0x1
     
     def moving(self):
         '''Whether or not the motor is moving
@@ -171,7 +172,7 @@ class OphydTmlMotor(Device, PositionerBase):
         -------
         moving : bool
         '''
-        return (self.mot_msta_value & (1 << 0xA)) != 0
+        return (self.mot_msta.get() & (1 << 0xA)) != 0
     def home(self, direction, wait=True,timeout=120, **kwargs):
         if self.position() == 0 and self.ishomed():
             return Status()

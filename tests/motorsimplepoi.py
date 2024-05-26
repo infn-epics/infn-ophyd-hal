@@ -23,8 +23,12 @@ import logging
 # UTLFLG02 	LINAC 	1190000 	992160
 # # Example usage
 logging.basicConfig(level=logging.INFO)
-
+def myreadupdate(timestamp=None, value=None, **kwargs):
+    print(f" read {value}")
+    
 motor = OphydTmlMotor("SPARC:TML:CH1:AC1FLG01",name="AC1FLG01", poi=[{"name": "yag", "pos": 670000}, {"name": "calibration", "pos": 550000}])
+motor.user_readback.subscribe(myreadupdate)
+
 print(str(motor.get_pos(True)))
 
 logging.info("Homing")
