@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="infn_ophyd_hal",
-    version="1.0.6",
+    version="1.1.9",
     description="Ophyd HAL for controlling motors, cameras, magnets... specifically INFN facilities",
     author="Andrea Michelotti", 
     author_email="andrea.michelotti@infn.it", 

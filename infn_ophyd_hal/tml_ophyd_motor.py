@@ -18,6 +18,8 @@ CMD_ABS_POS = 2
 CMD_REL_POS = 1
 CMD_JOGF = 4
 CMD_JOGR = 5
+CMD_NONE = 0
+
 
 RUN = 1
 STOP = 2
@@ -105,19 +107,22 @@ class OphydTmlMotor(Device, PositionerBase):
                 if restart:
                     self.stop()
                     self.mot_msgs.put("STOP")
-                    time.sleep(1) 
+                    time.sleep(2) 
                     self.mot_msgs.put("START")
-                    time.sleep(1)
+                    time.sleep(2)
                 self.mot_stat_value = self.mot_stat.get()
                 if self.mot_stat_value != "PROCESSING":
                     self.mot_msgs.put("STOP")
-                    time.sleep(1) 
+                    time.sleep(2) 
                     self.mot_msgs.put("START")
                 return
             except Exception as e:
                 logger.warning(f"ENABLE Attempt {attempt} failed with error: {e}")
-                self.mot_msgs.put("STOP")
                 if attempt < MAX_RETRIES:
+                    self.stop()
+
+                    self.mot_msgs.put("STOP")
+
                     time.sleep(RETRY_DELAY) 
                     self.mot_msgs.put("START")
                 else:
@@ -174,25 +179,24 @@ class OphydTmlMotor(Device, PositionerBase):
         '''
         return (self.mot_msta.get() & (1 << 0xA)) != 0
     def home(self, direction, wait=True,timeout=120, **kwargs):
-        if self.position() == 0 and self.ishomed():
-            return Status()
-        if self.homed.get():
-            ## if already homed just move
-            return self.move(0)
+        
         
         for attempt in range(1, MAX_RETRIES + 1):
             try:
-                logger.debug(f"home")
+                logger.info(f"home")
 
                 self.mot_act_sp.put(CMD_HOME)
-                time.sleep(0.5)
+                time.sleep(1)
                 self.mot_actx_sp.put(RUN)
                 stat = self.wait_homed(timeout)
                 return stat
             except Exception as e:
                 logger.warning(f"HOME Attempt {attempt} failed with error: {e}")
-                self.mot_msgs.put("STOP")
+                self.stop()
+
                 if attempt < MAX_RETRIES:
+                    self.mot_msgs.put("STOP")
+
                     time.sleep(RETRY_DELAY) 
                     self.mot_msgs.put("START")
 
@@ -242,7 +246,10 @@ class OphydTmlMotor(Device, PositionerBase):
             position = self.poi2pos(posstr)
             if(position<0):
                 raise Exception("BAD POI "+posstr)
-            
+        if position == self.position():
+            logging.info(f"already at {position}")
+            return MoveStatus(self,position)
+        
         self.check_value(position)
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -251,6 +258,9 @@ class OphydTmlMotor(Device, PositionerBase):
             except Exception as e:
                 logger.warning(f"MOVE Attempt {attempt} failed with error: {e}")
                 if attempt < MAX_RETRIES:
+                    self.stop()
+                    time.sleep(RETRY_DELAY) 
+
                     self.mot_msgs.put("STOP")
                     time.sleep(RETRY_DELAY) 
                     self.mot_msgs.put("START")
@@ -279,17 +289,28 @@ class OphydTmlMotor(Device, PositionerBase):
         if isinstance(position, str):
             position = self.poi2pos(position)
         if (position == self.position()):
+            logger.info(f"already in {position}")
+
             return MoveStatus(self,position)
-        
+
         self.user_setpoint.put(position)
+        time.sleep(0.5)
+
         self.mot_act_sp.put(CMD_ABS_POS)
         time.sleep(0.5)
 
         self.mot_actx_sp.put(RUN)
-        logger.debug(f"set {position}")
-        self.wait_move(timeout=5)
+        logger.info(f"set {position}")
+        time.sleep(5)
+        if(self.motor_moving.get()):
+            self.wait_move(timeout=240)
+            return self.wait_done(wait,position,timeout)
+        else:
+            self.user_setpoint.put(0)
+            self.mot_act_sp.put(CMD_NONE)
 
-        return self.wait_done(wait,position,timeout)
+
+            raise Exception(f" motor not moving")
 
         # Set state to waitend or any other state needed
 
@@ -299,12 +320,14 @@ class OphydTmlMotor(Device, PositionerBase):
 
         self.mot_actx_sp.put(RUN)
         # Set state to waitend or any other state needed
+        logger.info(f"jogf")
 
         return self.wait_done(wait)
 
     def jogr(self,wait=True):
         self.mot_act_sp.put(CMD_JOGR)
         time.sleep(0.5)
+        logger.info(f"jogr")
 
         self.mot_actx_sp.put(RUN)
         return self.wait_done(wait)
@@ -329,6 +352,7 @@ class OphydTmlMotor(Device, PositionerBase):
         self.user_setpoint.put(position)
         self.mot_act_sp.put(CMD_REL_POS)
         time.sleep(0.5)
+        logger.info(f"set rel {position}")
 
         self.mot_actx_sp.put(RUN)
         return self.wait_done(wait)
@@ -393,9 +417,9 @@ class OphydTmlMotor(Device, PositionerBase):
 
         # Subscribe to the motor moving signal
         self.motor_moving.subscribe(start_moving)
-        logger.debug(f"wait_move {timeout}")
+        logger.info(f"wait_move {timeout}")
         move_status.wait()
-        logger.debug(f"exit wait_move {timeout}")
+        logger.info(f"exit wait_move {timeout}")
 
         return move_status
     
@@ -412,8 +436,8 @@ class OphydTmlMotor(Device, PositionerBase):
 
         # Subscribe to the motor moving signal
         self.homed.subscribe(start_moving)
-        logger.debug(f"wait_homed {timeout}")
+        logger.info(f"wait_homed {timeout}")
         move_status.wait()
-        logger.debug(f"exit wait_homed {timeout}")
+        logger.info(f"exit wait_homed {timeout}")
 
         return move_status
