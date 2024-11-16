@@ -33,7 +33,22 @@
                 "EPICS_CA_ADDR_LIST": "192.168.36.201", // SPARC
                 "EPICS_CA_AUTO_ADDR_LIST":"NO"
             }
+        },
+        {
+            "name": "Python: test PS SIM",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "tests/testps.py",
+            "console": "integratedTerminal",
+            // "python": "${workspaceFolder}/ophyd-env/bin/python",
+            "justMyCode": true
+            // "env": {
+            //     "EPICS_CA_ADDR_LIST": "192.168.36.201", // SPARC
+            //     "EPICS_CA_AUTO_ADDR_LIST":"NO"
+            // }
         }
+
 
 
     ]

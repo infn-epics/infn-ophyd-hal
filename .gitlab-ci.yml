@@ -14,7 +14,7 @@ before_script:
 ophyd-test:
   stage: ophyd-test
   script:
-    - echo "to fill"
+    - tests/testps.py
 
 
 pypi-publish:
