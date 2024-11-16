@@ -14,7 +14,7 @@ before_script:
 ophyd-test:
   stage: ophyd-test
   script:
-    - tests/testps.py
+    - python tests/testps.py
 
 
 pypi-publish:
