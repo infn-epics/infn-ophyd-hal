@@ -39,6 +39,9 @@ class OphydPSSim(OphydPS):
             if self._state == ophyd_ps_state.INTERLOCK or self._state == ophyd_ps_state.ERROR:
                 state =  ophyd_ps_state.ON
 
+        if state != ophyd_ps_state.ON:
+            self.set_current(0)
+            
         changed=(self._state != state)
 
         self._state = state
@@ -73,22 +76,21 @@ class OphydPSSim(OphydPS):
             try:
 
                 new_current = self._current
-                if random.random() < self._error_prob:
-                    self.set_state(ophyd_ps_state.ERROR)
-
-                if random.random() < self._interlock_prob:
-                    self.set_state(ophyd_ps_state.INTERLOCK)
-                    
-                if self.get_state() != ophyd_ps_state.ON:
-                    new_current=0
-                else:
-                    fluctuation = new_current * self.uncertainty_percentage / 100.0
-                    new_current= new_current+ random.uniform(-fluctuation, fluctuation)
-                    self.set_current(new_current)
+                
 
                 
                     
-
+                if self.get_state() == ophyd_ps_state.ON:
+                    fluctuation = new_current * self.uncertainty_percentage / 100.0
+                    new_current= new_current+ random.uniform(-fluctuation, fluctuation)
+                    self.set_current(new_current)
+                    ## during ON simulate errors and interlocks
+                    if random.random() < self._interlock_prob:
+                        self.set_state(ophyd_ps_state.INTERLOCK)
+                    
+                    if random.random() < self._error_prob:
+                        self.set_state(ophyd_ps_state.ERROR)
+                           
                 time.sleep(self._simcycle) 
             except Exception as e:
                 print(f"Simulation error: {e}")
