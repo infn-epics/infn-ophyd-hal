@@ -35,9 +35,17 @@ class OphydPSSim(OphydPS):
 
     def set_state(self, state: ophyd_ps_state):
         """Simulate setting the state."""
-        if state==ophyd_ps_state.RESET:
-            if self._state == ophyd_ps_state.INTERLOCK or self._state == ophyd_ps_state.ERROR:
+        if self._state == ophyd_ps_state.INTERLOCK or self._state == ophyd_ps_state.ERROR:
+            if state==ophyd_ps_state.RESET:
                 state =  ophyd_ps_state.ON
+            elif state==ophyd_ps_state.OFF:
+                state =  ophyd_ps_state.OFF 
+            else:
+                print(f"[{self.name}] [sim] a \"RESET\" | \"OFF\" must done in the state:\"{state}\"")
+                self.set_current(0)
+                return
+        
+
 
         if state != ophyd_ps_state.ON:
             self.set_current(0)
