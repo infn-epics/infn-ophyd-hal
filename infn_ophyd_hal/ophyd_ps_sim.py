@@ -23,9 +23,11 @@ class OphydPSSim(OphydPS):
     def set_current(self, value: float):
         """Simulate setting the current."""
         super().set_current(value)  # Check against min/max limits
+        changed=(self._current != value)
         self._current = value
-        print(f"Simulated setting current to {value} A")
-        self.on_current_change(value)
+        if(changed):
+            print(f"[{self.name}] [sim] changed current to {value} A")
+            self.on_current_change(value)
 
     def set_state(self, state: ophyd_ps_state):
         """Simulate setting the state."""
@@ -33,10 +35,12 @@ class OphydPSSim(OphydPS):
             if self._state == ophyd_ps_state.INTERLOCK or self._state == ophyd_ps_state.ERROR:
                 state =  ophyd_ps_state.ON
 
+        changed=(self._state != state)
+
         self._state = state
-        
-        print(f"Simulated setting state to {state}")
-        self.on_state_change(state)
+        if changed:
+            print(f"[{self.name}] [sim] simulated changed state to \"{state}\"")
+            self.on_state_change(state)
 
     def get_current(self) -> float:
         """Get the simulated current with optional uncertainty."""
