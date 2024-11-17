@@ -5,9 +5,9 @@ class ophyd_ps_state(str, Enum):
     OFF = "OFF"
     ON = "ON"
     STANDBY = "STANDBY"
+    RESET = "RESET"
     INTERLOCK = "INTERLOCK"
     ERROR = "ERROR"
-    RESET = "RESET"
 
 # Base class for power supply
 class OphydPS():
@@ -25,27 +25,31 @@ class OphydPS():
             raise ValueError(
                 f"Current {value} is out of bounds! Must be between {self.min_current} and {self.max_current}."
             )
-        self.on_current_change(value)
 
     def set_state(self, state: ophyd_ps_state):
         """
         Set the state of the power supply.
         Should be overridden in derived classes for hardware-specific logic.
-        """            
-        self.on_state_change(state)
+        """ 
+        print(f"{self.name} to ovverride [OphydPS:set_state] Current changed to: {ophyd_ps_state}")
+           
 
     def get_current(self) -> float:
         """Get the current value."""
+        print(f"{self.name} to ovverride [OphydPS:get_current]")
+
         return 0
 
     def get_state(self) -> ophyd_ps_state:
         """Get the state value."""
+        print(f"{self.name} to ovverride [OphydPS:get_state]")
+
         return ophyd_ps_state.OFF
 
     def on_current_change(self, new_value):
         """Callback for current change."""
-        print(f"[Callback] Current changed to: {new_value}")
+        print(f"{self.name} [OphydPS:Callback] Current changed to: {new_value}")
 
     def on_state_change(self, new_state):
         """Callback for state change."""
-        print(f"[Callback] State changed to: {new_state}")
+        print(f"{self.name} [OphydPS:Callback] State changed to: {new_state}")

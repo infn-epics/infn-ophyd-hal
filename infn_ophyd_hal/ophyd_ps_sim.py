@@ -22,6 +22,10 @@ class OphydPSSim(OphydPS):
 
     def set_current(self, value: float):
         """Simulate setting the current."""
+        if self._state != ophyd_ps_state.ON:
+            print(f"[{self.name}] [sim] cannot change current to {value} A , powersupply is not in ON")
+            return
+        
         super().set_current(value)  # Check against min/max limits
         changed=(self._current != value)
         self._current = value
