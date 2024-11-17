@@ -63,17 +63,22 @@ def main():
 
     ps.set_state("ON")
     ps.set_current(10)
-    cnt=0
-    try:
-        ps2.set_current(cnt)
-        if ps2.get_current()!=cnt:
-            print(f"## {ps2.name} set {cnt}!= readout {ps2.get_current()}")
-            return -2
+    cnt=20
 
-        # Run simulation for 10 seconds
-        time.sleep(10)
+    try:
+        while cnt:
+            ps2.set_current(cnt)
+            if ps2.get_current()!=cnt:
+                print(f"## {ps2.name} set {cnt}!= readout {ps2.get_current()}")
+                return -2
+
+            # Run simulation for 10 seconds
+            cnt = cnt-1
+            time.sleep(2)
     finally:
         ps.stop_simulation()
+        ps2.stop_simulation()
+
 
 if __name__ == "__main__":
     main()
