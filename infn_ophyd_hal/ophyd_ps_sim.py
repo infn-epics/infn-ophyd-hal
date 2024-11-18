@@ -4,7 +4,7 @@ from threading import Thread
 from infn_ophyd_hal import OphydPS,ophyd_ps_state
 
 class OphydPSSim(OphydPS):
-    def __init__(self, name, uncertainty_percentage=0.0, error_prob=0,interlock_prob=0,simcycle=1, **kwargs):
+    def __init__(self, name, uncertainty_percentage=0.0, error_prob=0,interlock_prob=0,simcycle=.2,slope=10, **kwargs):
         """
         Initialize the simulated power supply.
 
@@ -12,6 +12,8 @@ class OphydPSSim(OphydPS):
         """
         super().__init__(name=name, **kwargs)
         self._current = 0.0
+        self._setpoint = 0.0
+
         self._state = ophyd_ps_state.OFF
         self.uncertainty_percentage = uncertainty_percentage
         self._simulation_thread = None
@@ -19,6 +21,7 @@ class OphydPSSim(OphydPS):
         self._error_prob = error_prob
         self._interlock_prob=interlock_prob
         self._simcycle = simcycle
+        self._slope=slope ## ampere/s
 
     def set_current(self, value: float):
         """Simulate setting the current."""
@@ -27,11 +30,11 @@ class OphydPSSim(OphydPS):
             return
         
         super().set_current(value)  # Check against min/max limits
-        changed=(self._current != value)
-        self._current = value
-        if(changed):
-            print(f"[{self.name}] [sim] changed current to {value} A")
-            self.on_current_change(value)
+        
+        self._setpoint = value
+        # if(changed):
+        #     print(f"[{self.name}] [sim] changed current to {value} A")
+        #     self.on_current_change(value)
 
     def set_state(self, state: ophyd_ps_state):
         """Simulate setting the state."""
@@ -42,20 +45,20 @@ class OphydPSSim(OphydPS):
                 state =  ophyd_ps_state.OFF 
             else:
                 print(f"[{self.name}] [sim] a \"RESET\" | \"OFF\" must done in the state:\"{state}\"")
-                self.set_current(0)
+                self._current=0
                 return
         
 
 
         if state != ophyd_ps_state.ON:
-            self.set_current(0)
+            self._current=0
             
         changed=(self._state != state)
 
         self._state = state
         if changed:
             print(f"[{self.name}] [sim] simulated changed state to \"{state}\"")
-            self.on_state_change(state)
+            self.on_state_change(state,self)
 
     def get_current(self) -> float:
         """Get the simulated current with optional uncertainty."""
@@ -79,6 +82,7 @@ class OphydPSSim(OphydPS):
             self._simulation_thread.join()
 
     def _simulate_device(self):
+        oldcurrent=0
         """Simulate periodic updates to current and state."""
         while self._running:
             try:
@@ -89,14 +93,33 @@ class OphydPSSim(OphydPS):
                 
                     
                 if self.get_state() == ophyd_ps_state.ON:
-                    fluctuation = new_current * self.uncertainty_percentage / 100.0
-                    new_current= new_current+ random.uniform(-fluctuation, fluctuation)
-                    self.set_current(new_current)
+                    increment= self._slope*self._simcycle
+                    fluctuation = self._current * self.uncertainty_percentage / 100.0
+                    
+                    delta=self._setpoint - self._current 
+                    if abs(delta)<increment: 
+                        self._current=self._current +delta
+                    else:
+                        if delta>0:
+                            self._current=self._current +increment      
+                        else:
+                            self._current=self._current - increment      
+
+                    
+                    self._current= self._current+ random.uniform(-fluctuation, fluctuation)
+                    if oldcurrent!=self._current:
+                        self.on_current_change(self._current,self)
+
+                    oldcurrent=self._current
                     ## during ON simulate errors and interlocks
                     if random.random() < self._interlock_prob:
+                        self._current=0
+                        self.on_current_change(self._current,self)
                         self.set_state(ophyd_ps_state.INTERLOCK)
                     
                     if random.random() < self._error_prob:
+                        self._current=0
+                        self.on_current_change(self._current,self)
                         self.set_state(ophyd_ps_state.ERROR)
                            
                 time.sleep(self._simcycle) 

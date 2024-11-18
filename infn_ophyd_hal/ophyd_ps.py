@@ -46,10 +46,10 @@ class OphydPS():
 
         return ophyd_ps_state.OFF
 
-    def on_current_change(self, new_value):
+    def on_current_change(self, new_value,*args):
         """Callback for current change."""
         print(f"{self.name} [OphydPS:Callback] Current changed to: {new_value}")
 
-    def on_state_change(self, new_state):
+    def on_state_change(self, new_state,*args):
         """Callback for state change."""
         print(f"{self.name} [OphydPS:Callback] State changed to: {new_state}")
