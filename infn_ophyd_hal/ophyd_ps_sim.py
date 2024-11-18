@@ -107,10 +107,7 @@ class OphydPSSim(OphydPS):
 
                     
                     self._current= self._current+ random.uniform(-fluctuation, fluctuation)
-                    if oldcurrent!=self._current:
-                        self.on_current_change(self._current,self)
-
-                    oldcurrent=self._current
+                
                     ## during ON simulate errors and interlocks
                     if random.random() < self._interlock_prob:
                         self._current=0
@@ -121,7 +118,10 @@ class OphydPSSim(OphydPS):
                         self._current=0
                         self.on_current_change(self._current,self)
                         self.set_state(ophyd_ps_state.ERROR)
-                           
+                if oldcurrent!=self._current:
+                    self.on_current_change(self._current,self)
+
+                oldcurrent=self._current        
                 time.sleep(self._simcycle) 
             except Exception as e:
                 print(f"Simulation error: {e}")
