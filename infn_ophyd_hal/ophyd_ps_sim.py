@@ -46,12 +46,16 @@ class OphydPSSim(OphydPS):
             else:
                 print(f"[{self.name}] [sim] a \"RESET\" | \"OFF\" must done in the state:\"{state}\"")
                 self._current=0
+                self.on_current_change(self._current,self)
+
                 return
         
 
 
         if state != ophyd_ps_state.ON:
             self._current=0
+            self.on_current_change(self._current,self)
+
             
         changed=(self._state != state)
 
@@ -86,11 +90,7 @@ class OphydPSSim(OphydPS):
         """Simulate periodic updates to current and state."""
         while self._running:
             try:
-
-                new_current = self._current
-                
-
-                
+                                
                     
                 if self.get_state() == ophyd_ps_state.ON:
                     increment= self._slope*self._simcycle
