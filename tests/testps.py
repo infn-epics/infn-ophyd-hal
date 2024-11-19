@@ -1,4 +1,4 @@
-from infn_ophyd_hal import OphydPSSim,ophyd_ps_state
+from infn_ophyd_hal import PowerSupplyFactory,ophyd_ps_state
 import time
 
 def main():
@@ -28,7 +28,7 @@ def main():
             psa.set_state(ophyd_ps_state.RESET)
             psa.set_current(11)
             
-    ps = OphydPSSim(
+    ps = PowerSupplyFactory.create("sim",
         name="broken-sim",
         min_current=0.0,
         max_current=100.0,
@@ -40,7 +40,7 @@ def main():
     ps.on_state_change = state_change_callback
     psi= [None] * 10
     for alim in range(0,9):
-        psi[alim] = OphydPSSim(
+        psi[alim] =PowerSupplyFactory.create("sim",
             name="ideal-sim-"+str(alim),
             min_current=-100.0,
             max_current=100.0,

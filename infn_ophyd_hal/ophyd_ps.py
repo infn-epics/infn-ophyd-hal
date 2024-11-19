@@ -8,6 +8,7 @@ class ophyd_ps_state(str, Enum):
     RESET = "RESET"
     INTERLOCK = "INTERLOCK"
     ERROR = "ERROR"
+    UKNOWN = "ERROR"
 
 # Base class for power supply
 class OphydPS():
@@ -53,3 +54,19 @@ class OphydPS():
     def on_state_change(self, new_state,*args):
         """Callback for state change."""
         print(f"{self.name} [OphydPS:Callback] State changed to: {new_state}")
+        
+        
+
+class PowerSupplyFactory:
+    _registry = {}
+
+    @classmethod
+    def register_type(cls, supply_type, constructor):
+        print(f"* registered type {supply_type}")
+        cls._registry[supply_type] = constructor
+
+    @classmethod
+    def create(cls, supply_type, name, *args, **kwargs):
+        if supply_type not in cls._registry:
+            raise ValueError(f"Unknown PowerSupply type: {supply_type}")
+        return cls._registry[supply_type](name, *args, **kwargs)
