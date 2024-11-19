@@ -22,6 +22,7 @@ class OphydPSSim(OphydPS):
         self._interlock_prob=interlock_prob
         self._simcycle = simcycle
         self._slope=slope ## ampere/s
+        self.start_simulation()
 
     def set_current(self, value: float):
         """Simulate setting the current."""

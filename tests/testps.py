@@ -53,9 +53,7 @@ def main():
         
     
 # Attach callbacks
-    ps.start_simulation()
     for alim in range(0,9):
-        psi[alim].start_simulation()
         psi[alim].set_state("ON")
         val = ((alim+1)*10)*(-1 if (alim & 1) else 1)
         psi[alim].set_current(val)
