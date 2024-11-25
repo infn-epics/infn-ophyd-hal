@@ -24,6 +24,7 @@ def main():
 
     # Load YAML Configuration
     config = load_config(args.config)
+    psa=[]
     
     for magnet in config["magnets"]:
         for name, details in magnet.items():
@@ -34,11 +35,26 @@ def main():
             ps = PowerSupplyFactory.create(driver,name,prefix=f"{p}:{root}",**params)
             ps.on_current_change = current_change_callback
             ps.on_state_change = state_change_callback
+            ps.set_state("ON")
+            ps.set_current(2)
+            ps.set_current(-2)
+            psa.append(ps)
     
-    try:
-            time.sleep(20)
-    finally:
-        print(f"* {ps.name} reached  current:{ps.get_current()}")
+    
+        time.sleep(20)
+        cnt=0
+        for p in psa:
+            print(f"* {ps.name} reached  current:{p.get_current()}")
+            p.set_state("STANDBY")
+        while cnt<2:
+            for p in psa:
+                if p.get_state() == "STANDBY":
+                    print(f"* {ps.name} reached  current:{p.get_current()} state {p.get_state()}")
+                    cnt=cnt+1
+            time.sleep(1)
+
+
+        
 
 
 

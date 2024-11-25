@@ -1,35 +1,27 @@
 uniprefix: "UNISIM"
 magnets:
-  - QUATM001:
+  - QUATB004:
       driver: "dante"
       prefix: "DAFNE:BTF"
-      root: "QUATM001"
+      root: "QUATB004"
       zone: "TM"
       type: "QUA"
-      desc: "Quadrupole Magnet QUATM001"
+      desc: "Quadrupole Magnet QUATB004"
       param:
-        max: 100
-        min: -100
-  
-  - DHPTB101:
+        max: 5
+        min: -5
+        th_stdby: 1.5
+  - QUATB003:
       driver: "dante"
       prefix: "DAFNE:BTF"
-      root: "DHPTB101"
-      zone: "TB"
-      type: "DIP"
-      desc: "Dipole Magnet DHPTB101"
-      param:
-        max: 500
-        min: -500
-  
-  - CVVTM001:
-      driver: "dante"
-      prefix: "DAFNE:BTF"
-      root: "CVVTM001"
+      root: "QUATB003"
       zone: "TM"
-      type: "COR"
-      desc: "Corrector Magnet CVVTM001"
+      type: "QUA"
+      desc: "Quadrupole Magnet QUATB004"
       param:
-        max: 16.67
-        min: -16.67
+        max: 5
+        min: -5
+        th_stdby: 0.5
+  
+  
   

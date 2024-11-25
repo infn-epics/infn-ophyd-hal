@@ -7,52 +7,66 @@ from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO,Positione
 
 
 
+class ZeroStandby(PowerSupplyState):
+    def handle(self, ps):
+        print(f"State {ps._state_instance.__class__.__name__}")
+        if abs(ps.get_current()>ps._th_stdby):
+            print(f"[{ps.name}] Current must be less of {ps._th_stdby} A : ON, Current: {ps._current:.2f}")
+            print(f"[{ps.name}] set current to 0")
+            ps.current.put(0)
+            return
+        else:
+            print(f"[{ps.name}] Current: {ps._current:.2f} putting in STANDBY ")
+            ps.mode.put(ps.encodeStatus(ophyd_ps_state.STANDBY))
 
 class OnState(PowerSupplyState):
     def handle(self, ps):
+        ## handle change state
         if ps._setstate == ophyd_ps_state.STANDBY:
-            ps.transition_to(StandbyState())
-        elif ps._state == ophyd_ps_state.ON:
-            ## handle current
-            if not ps._bipolar:
-                if (ps._setpoint>=0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
-                    print(f"[{ps.name}] Polarity mismatch detected. Transitioning to STANDBY.")
-                    ps.transition_to(StandbyState())
-                    return
+            ps.transition_to(ZeroStandby)
+        
+        elif ps._setstate == ophyd_ps_state.ON:
             if abs(ps._setpoint - ps.get_current()) > ps._th_current:
+                if not ps._bipolar:
+                    if (ps._setpoint>=0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
+                        print(f"[{ps.name}] Polarity mismatch detected. Transitioning to STANDBY.")
+                        ps.transition_to(ZeroStandby)
+                        return
+                    ps.current.put(abs(ps._setpoint))
+                else:
                     ps.current.put(ps._setpoint)
-            
+                print(f"[{ps.name}] set current to {ps._setpoint}")
 
-        print(f"[{ps.name}] State: ON, Current: {ps._current:.2f}")
+                    
+        print(f"[{ps.name}] State: {ps._state} set:{ps._setstate}, Current: {ps._current:.2f} set:{ps._setpoint:.2f}, Polarity: {ps._polarity} ")
 
 class StandbyState(PowerSupplyState):
     def handle(self, ps):
-        ## if state on current under threshold
-        if ps._state == ophyd_ps_state.ON:
-            if abs(ps.get_current()>ps._th_stdby):
-                print(f"[{ps.name}] Current must be less of {ps._th_stdby} A : ON, Current: {ps._current:.2f}")
-                ps.current.put(0)
-            else:
-                print(f"[{ps.name}] Current: {ps._current:.2f} putting in STANDBY ")
-                ps.state.put(ophyd_ps_state.STANDBY)
-        elif ps._state == ophyd_ps_state.STANDBY:
+        ## if state on current under threshold    
+        if ps._state == ophyd_ps_state.STANDBY:
             ## fix polarity
             ## fix state
             if ps._setpoint==0:
+                print(f"[{ps.name}] set polarity to 0")
+
                 ps.polarity.put(0)
             elif(ps._setpoint>0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
-                ps.polarity.put(1 if ps._setpoint>=0 else -1)
+                v= "POS" if ps._setpoint>=0 else "NEG"
+                print(f"[{ps.name}] set polarity to {v}")
+
+                ps.polarity.put(v)
             elif(ps._setstate == ophyd_ps_state.ON):
-                ps.state.put(ophyd_ps_state.ON)
-                ps.transition_to(OnState())
+                v= ps.encodeStatus(ophyd_ps_state.ON)
+                print(f"[{ps.name}] set mode to ON {v}")
+                ps.mode.put(v)
 
            
 class OnInit(PowerSupplyState):
     def handle(self, ps):
-        if self._state == ophyd_ps_state.ON:
-            ps.transition_to(OnState())
-        if self._state != ophyd_ps_state.UKNOWN:
-            ps.transition_to(StandbyState())
+        if ps._state == ophyd_ps_state.ON:
+            ps.transition_to(OnState)
+        if ps._state != ophyd_ps_state.UKNOWN:
+            ps.transition_to(StandbyState)
             
 
             
@@ -65,9 +79,9 @@ class OphydPSDante(OphydPS,Device):
     current_rb = Cpt(EpicsSignalRO, ':current_rb')
     polarity_rb = Cpt(EpicsSignalRO, ':polarity_rb')
     mode_rb = Cpt(EpicsSignalRO, ':mode_rb')
-  #  current = Cpt(EpicsSignal, ':current')
-  #  polarity= Cpt(EpicsSignal, ':polarity')
-  #  mode = Cpt(EpicsSignal, ':mode')
+    current = Cpt(EpicsSignal, ':current')
+    polarity= Cpt(EpicsSignal, ':polarity')
+    mode = Cpt(EpicsSignal, ':mode')
 
     def __init__(self, name,prefix,max=100,min=-100,zero_error=1.5,sim_cycle=1,th_stdby=0.5,th_current=0.01, **kwargs):
         """
@@ -93,10 +107,15 @@ class OphydPSDante(OphydPS,Device):
         self._run_thread = None
         self._running = False
         self._simcycle=sim_cycle
+
+        self._state_instance=OnInit()
         self.current_rb.subscribe(self._on_current_change)
         self.polarity_rb.subscribe(self._on_pol_change)
         self.mode_rb.subscribe(self._on_mode_change)
-        self.transition_to(OnInit())
+
+        self.transition_to(OnInit)
+        print(f"* creating Dante Mag {name} as {prefix}")
+
         self.run()
         
     def _on_current_change(self, pvname=None, value=None, **kwargs):
@@ -114,6 +133,14 @@ class OphydPSDante(OphydPS,Device):
         self._state_instance = new_state_class()
         print(f"[{self.name}] Transitioning to {self._state_instance.__class__.__name__}.")
 
+    def encodeStatus(self,value):
+        if value == ophyd_ps_state.ON:
+            return "OPER"
+        elif value == ophyd_ps_state.RESET:
+            return "RST"
+        ## STANDBY and other
+        return "STBY"
+        
     def decodeStatus(self,value):
         if value == 0:
             return ophyd_ps_state.OFF
@@ -139,6 +166,14 @@ class OphydPSDante(OphydPS,Device):
         self._mode = value
         print(f"{self.name} mode changed {value} -> {self._state}")
         self.on_state_change(self._state,self)
+        if(self._state==ophyd_ps_state.ON):
+            self.transition_to(OnState)
+        elif (self._state==ophyd_ps_state.ON) or (ophyd_ps_state.STANDBY):
+            self.transition_to(StandbyState)
+        else:
+            self.transition_to(ErrorState)
+
+
             
     def set_current(self, value: float):
         """ setting the current."""
@@ -149,21 +184,8 @@ class OphydPSDante(OphydPS,Device):
         self._setpoint = value
         
 
-    def set_state(self, state: ophyd_ps_state):
-        if self._state != state:
-            if state ==ophyd_ps_state.STANDBY:
-                self.transition_to(StandbyState)
-                
-        if state== ophyd_ps_state.ON:
-            self._setstate = state
-
-        elif state == ophyd_ps_state.OFF or state == ophyd_ps_state.STANDBY:
-            self._setstate = state
-        elif state == ophyd_ps_state.RESET
-            print(f"[{self.name}] \"{state}\" not implemented")
-            return
-
-
+    def set_state(self, state: ophyd_ps_state):        
+        self._setstate = state
         print(f"[{self.name}] state setpoint \"{state}\"")
 
     def get_current(self) -> float:
@@ -190,6 +212,8 @@ class OphydPSDante(OphydPS,Device):
     def _run_device(self):
         oldcurrent=0
         oldstate= ophyd_ps_state.UKNOWN
+        print(f"* controlling dante ps {self.name}")
+
         """Simulate periodic updates to current and state."""
         while self._running:
             try:
@@ -198,4 +222,6 @@ class OphydPSDante(OphydPS,Device):
 
                 time.sleep(self._simcycle) 
             except Exception as e:
-                print(f"Simulation error: {e}")
+                print(f"Run error: {e}")
+                self._running= False
+        print(f"* end controlling dante ps {self.name} ")
