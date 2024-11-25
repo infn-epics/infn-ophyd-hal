@@ -1,4 +1,5 @@
 from enum import Enum
+from abc import ABC, abstractmethod
 
 # Enum for power supply states
 class ophyd_ps_state(str, Enum):
@@ -32,18 +33,25 @@ class OphydPS():
         Set the state of the power supply.
         Should be overridden in derived classes for hardware-specific logic.
         """ 
-        print(f"{self.name} to ovverride [OphydPS:set_state] Current changed to: {ophyd_ps_state}")
+        print(f"{self.name} to override [OphydPS:set_state] Current changed to: {ophyd_ps_state}")
            
-
+    def run(self):
+        """Run machine state"""
+        print(f"{self.name} to override [OphydPS:run]")
+        return 0
+    def stop(self):
+        """Stop machine state"""
+        print(f"{self.name} to override [OphydPS:stop]")
+        
     def get_current(self) -> float:
         """Get the current value."""
-        print(f"{self.name} to ovverride [OphydPS:get_current]")
+        print(f"{self.name} to override [OphydPS:get_current]")
 
         return 0
 
     def get_state(self) -> ophyd_ps_state:
         """Get the state value."""
-        print(f"{self.name} to ovverride [OphydPS:get_state]")
+        print(f"{self.name} to override [OphydPS:get_state]")
 
         return ophyd_ps_state.OFF
 
@@ -56,7 +64,14 @@ class OphydPS():
         print(f"{self.name} [OphydPS:Callback] State changed to: {new_state}")
         
         
+class PowerSupplyState(ABC):
+    """Abstract base class for power supply states."""
 
+    @abstractmethod
+    def handle(self, ps):
+        """Perform actions specific to the current state."""
+        pass
+    
 class PowerSupplyFactory:
     _registry = {}
 

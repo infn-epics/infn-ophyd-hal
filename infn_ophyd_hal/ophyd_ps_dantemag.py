@@ -1,10 +1,66 @@
 import time
 import random
 from threading import Thread
-from infn_ophyd_hal import OphydPS,ophyd_ps_state
+from infn_ophyd_hal import OphydPS,ophyd_ps_state,PowerSupplyState
 from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO,PositionerBase
 
 
+
+
+
+class OnState(PowerSupplyState):
+    def handle(self, ps):
+        if ps._setstate == ophyd_ps_state.STANDBY:
+            ps.transition_to(StandbyState())
+        elif ps._state == ophyd_ps_state.ON:
+            ## handle current
+            if not ps._bipolar:
+                if (ps._setpoint>=0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
+                    print(f"[{ps.name}] Polarity mismatch detected. Transitioning to STANDBY.")
+                    ps.transition_to(StandbyState())
+                    return
+            if abs(ps._setpoint - ps.get_current()) > ps._th_current:
+                    ps.current.put(ps._setpoint)
+            
+
+        print(f"[{ps.name}] State: ON, Current: {ps._current:.2f}")
+
+class StandbyState(PowerSupplyState):
+    def handle(self, ps):
+        ## if state on current under threshold
+        if ps._state == ophyd_ps_state.ON:
+            if abs(ps.get_current()>ps._th_stdby):
+                print(f"[{ps.name}] Current must be less of {ps._th_stdby} A : ON, Current: {ps._current:.2f}")
+                ps.current.put(0)
+            else:
+                print(f"[{ps.name}] Current: {ps._current:.2f} putting in STANDBY ")
+                ps.state.put(ophyd_ps_state.STANDBY)
+        elif ps._state == ophyd_ps_state.STANDBY:
+            ## fix polarity
+            ## fix state
+            if ps._setpoint==0:
+                ps.polarity.put(0)
+            elif(ps._setpoint>0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
+                ps.polarity.put(1 if ps._setpoint>=0 else -1)
+            elif(ps._setstate == ophyd_ps_state.ON):
+                ps.state.put(ophyd_ps_state.ON)
+                ps.transition_to(OnState())
+
+           
+class OnInit(PowerSupplyState):
+    def handle(self, ps):
+        if self._state == ophyd_ps_state.ON:
+            ps.transition_to(OnState())
+        if self._state != ophyd_ps_state.UKNOWN:
+            ps.transition_to(StandbyState())
+            
+
+            
+
+class ErrorState(PowerSupplyState):
+    def handle(self, ps):
+        print(f"[{ps.name}] Error encountered. Current: {ps._current:.2f}")
+        
 class OphydPSDante(OphydPS,Device):
     current_rb = Cpt(EpicsSignalRO, ':current_rb')
     polarity_rb = Cpt(EpicsSignalRO, ':polarity_rb')
@@ -13,7 +69,7 @@ class OphydPSDante(OphydPS,Device):
   #  polarity= Cpt(EpicsSignal, ':polarity')
   #  mode = Cpt(EpicsSignal, ':mode')
 
-    def __init__(self, name,prefix,max=100,min=-100,zero_error=1.5,sim_cycle=1, **kwargs):
+    def __init__(self, name,prefix,max=100,min=-100,zero_error=1.5,sim_cycle=1,th_stdby=0.5,th_current=0.01, **kwargs):
         """
         Initialize the simulated power supply.
 
@@ -26,18 +82,22 @@ class OphydPSDante(OphydPS,Device):
         self._current = 0.0
         self._polarity=-100
         self._setpoint = 0.0
+        self._th_stdby=th_stdby # if less equal can switch to stdby
+        self._th_current=th_current # The step in setting current
+
         self._bipolar = False
         self._zero_error= zero_error ## error on zero
         self._setstate = ophyd_ps_state.UKNOWN
         self._state = ophyd_ps_state.UKNOWN
         self._mode=0
-        self._simulation_thread = None
+        self._run_thread = None
         self._running = False
         self._simcycle=sim_cycle
         self.current_rb.subscribe(self._on_current_change)
         self.polarity_rb.subscribe(self._on_pol_change)
         self.mode_rb.subscribe(self._on_mode_change)
-        self.start_simulation()
+        self.transition_to(OnInit())
+        self.run()
         
     def _on_current_change(self, pvname=None, value=None, **kwargs):
     
@@ -49,6 +109,10 @@ class OphydPSDante(OphydPS,Device):
         print(f"{self.name} current changed {value} -> {self._current}")
         self.on_current_change(self._current,self)
 
+    def transition_to(self, new_state_class):
+        """Transition to a new state."""
+        self._state_instance = new_state_class()
+        print(f"[{self.name}] Transitioning to {self._state_instance.__class__.__name__}.")
 
     def decodeStatus(self,value):
         if value == 0:
@@ -80,20 +144,27 @@ class OphydPSDante(OphydPS,Device):
         """ setting the current."""
         
         super().set_current(value)  # Check against min/max limits
-        print(f"{self.name} set current {value}")
+        print(f"{self.name} setpoint current {value}")
         
         self._setpoint = value
         
 
     def set_state(self, state: ophyd_ps_state):
+        if self._state != state:
+            if state ==ophyd_ps_state.STANDBY:
+                self.transition_to(StandbyState)
+                
         if state== ophyd_ps_state.ON:
             self._setstate = state
 
         elif state == ophyd_ps_state.OFF or state == ophyd_ps_state.STANDBY:
             self._setstate = state
+        elif state == ophyd_ps_state.RESET
+            print(f"[{self.name}] \"{state}\" not implemented")
+            return
 
-        
-        print(f"[{self.name}] set state to \"{state}\"")
+
+        print(f"[{self.name}] state setpoint \"{state}\"")
 
     def get_current(self) -> float:
         """Get the simulated current with optional uncertainty."""
@@ -104,52 +175,27 @@ class OphydPSDante(OphydPS,Device):
         """Get the simulated state."""
         return self._state
 
-    def start_simulation(self):
+    def run(self):
         """Start a background simulation."""
         self._running = True
-        self._simulation_thread = Thread(target=self._simulate_device, daemon=True)
-        self._simulation_thread.start()
+        self._run_thread = Thread(target=self._run_device, daemon=True)
+        self._run_thread.start()
 
-    def stop_simulation(self):
-        """Stop the simulation."""
+    def stop(self):
+        """Stop run """
         self._running = False
-        if self._simulation_thread is not None:
-            self._simulation_thread.join()
+        if self._run_thread is not None:
+            self._run_thread.join()
 
-    def _simulate_device(self):
+    def _run_device(self):
         oldcurrent=0
         oldstate= ophyd_ps_state.UKNOWN
         """Simulate periodic updates to current and state."""
         while self._running:
             try:
-                # if self._state != ophyd_ps_state.UKNOWN):
-                #     if self._state != self._setpoint:
-                #         if self._state == ophyd_ps_state.STANDBY and self._setpoint== ophyd_ps_state.ON:
-                #             print(f" current state {self._state} -> settinf for {self._setpoint}")
-                #             # self.mode.put(2)
-                        
-                #         if self._state == ophyd_ps_state.ON and self._setpoint== ophyd_ps_state.STANDBY:
-
-                #             if abs(self._current)>=0 and abs(self._current)<self._zero_error:
-                #                 print(f" current state {self._state} current {self._current} -> setting for {self._setpoint}")
-                #             #  self.mode.put(1)
-                #             else:
-                #                 print(f" current state {self._state} current {self._current}> {self._zero_error} setting current to zero")
-                #             #  self.current.put(0)
-                #     elif self._state == ophyd_ps_state.ON:
-                #         if self._setpoint!= self._current:
-                #             if self._bipolar:
-                #                 self.current.put(self._setpoint)
-                #             else:
-                #                 if (self._setpoint >=0 and self._current>=0) or (self._setpoint <0 and self._current==-1):
-                #                     # concordi
-                #                     self.current.put(self._setpoint)
-                #                 else:
-                #                     self.set_state(ophyd_ps_state.STANDBY) ## put stby
-
-
                 
-                
+                self._state_instance.handle(self)
+
                 time.sleep(self._simcycle) 
             except Exception as e:
                 print(f"Simulation error: {e}")

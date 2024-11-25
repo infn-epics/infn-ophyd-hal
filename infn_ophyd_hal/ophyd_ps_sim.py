@@ -3,6 +3,8 @@ import random
 from threading import Thread
 from infn_ophyd_hal import OphydPS,ophyd_ps_state
 
+
+    
 class OphydPSSim(OphydPS):
     def __init__(self, name, uncertainty_percentage=0.0, error_prob=0,interlock_prob=0,simcycle=.2,slope=10, **kwargs):
         """
@@ -16,13 +18,13 @@ class OphydPSSim(OphydPS):
 
         self._state = ophyd_ps_state.OFF
         self.uncertainty_percentage = uncertainty_percentage
-        self._simulation_thread = None
+        self._run_thread = None
         self._running = False
         self._error_prob = error_prob
         self._interlock_prob=interlock_prob
         self._simcycle = simcycle
         self._slope=slope ## ampere/s
-        self.start_simulation()
+        self.run()
 
     def set_current(self, value: float):
         """Simulate setting the current."""
@@ -74,19 +76,19 @@ class OphydPSSim(OphydPS):
         """Get the simulated state."""
         return self._state
 
-    def start_simulation(self):
-        """Start a background simulation."""
+    def run(self):
+        """Start a background run."""
         self._running = True
-        self._simulation_thread = Thread(target=self._simulate_device, daemon=True)
-        self._simulation_thread.start()
+        self._run_thread = Thread(target=self._run_device, daemon=True)
+        self._run_thread.start()
 
-    def stop_simulation(self):
-        """Stop the simulation."""
+    def stop(self):
+        """Stop the run."""
         self._running = False
-        if self._simulation_thread is not None:
-            self._simulation_thread.join()
+        if self._run_thread is not None:
+            self._run_thread.join()
 
-    def _simulate_device(self):
+    def _run_device(self):
         oldcurrent=0
         """Simulate periodic updates to current and state."""
         while self._running:
