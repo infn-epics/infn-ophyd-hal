@@ -69,7 +69,7 @@ def main():
     try:
             time.sleep(10)
     finally:
-        ps.stop_simulation()
+        ps.stop()
         print(f"* {ps.name} reached  current:{ps.get_current()}")
 
         for alim in range(0,9):
@@ -81,7 +81,7 @@ def main():
             else:
                 print(f"* {psi[alim].name} reached set point {val} current:{psi[alim].get_current()}")
         for alim in range(0,9):
-           psi[alim].stop_simulation() 
+           psi[alim].stop() 
 
 
 if __name__ == "__main__":
