@@ -17,7 +17,7 @@ magnets:
       root: "QUATB003"
       zone: "TM"
       type: "QUA"
-      desc: "Quadrupole Magnet QUATB004"
+      desc: "Quadrupole Magnet QUATB003"
       param:
         max: 5
         min: -5

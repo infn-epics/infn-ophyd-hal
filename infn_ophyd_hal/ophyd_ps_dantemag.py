@@ -26,16 +26,19 @@ class OnState(PowerSupplyState):
             ps.transition_to(ZeroStandby)
         
         elif ps._setstate == ophyd_ps_state.ON:
-            if abs(ps._setpoint - ps.get_current()) > ps._th_current:
-                if not ps._bipolar:
-                    if (ps._setpoint>=0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
-                        print(f"[{ps.name}] Polarity mismatch detected. Transitioning to STANDBY.")
-                        ps.transition_to(ZeroStandby)
-                        return
-                    ps.current.put(abs(ps._setpoint))
-                else:
-                    ps.current.put(ps._setpoint)
-                print(f"[{ps.name}] set current to {ps._setpoint}")
+            if ps._setpoint != None:
+                if abs(ps._setpoint - ps.get_current()) > ps._th_current:
+                    if not ps._bipolar:
+                        if ps._polarity!=None:
+                            if (ps._setpoint>=0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
+                                print(f"[{ps.name}] Polarity mismatch detected. Transitioning to STANDBY.")
+                                ps.transition_to(ZeroStandby)
+                                return
+                            ps.current.put(abs(ps._setpoint))
+                            print(f"[{ps.name}] set current to {ps._setpoint}")
+                    else:
+                        ps.current.put(ps._setpoint)
+                        print(f"[{ps.name}] Bipolar set current to {ps._setpoint}")
 
                     
         print(f"[{ps.name}] State: {ps._state} set:{ps._setstate}, Current: {ps._current:.2f} set:{ps._setpoint:.2f}, Polarity: {ps._polarity} ")
@@ -46,16 +49,19 @@ class StandbyState(PowerSupplyState):
         if ps._state == ophyd_ps_state.STANDBY:
             ## fix polarity
             ## fix state
-            if ps._setpoint==0:
-                print(f"[{ps.name}] set polarity to 0")
-
-                ps.polarity.put(0)
-            elif(ps._setpoint>0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
-                v= "POS" if ps._setpoint>=0 else "NEG"
-                print(f"[{ps.name}] set polarity to {v}")
-
-                ps.polarity.put(v)
-            elif(ps._setstate == ophyd_ps_state.ON):
+            if not(ps._bipolar):
+                if (ps._setpoint!= None):
+                    if ps._setpoint==0:
+                        print(f"[{ps.name}] set polarity to 0")
+                        ps.polarity.put(0)
+                        return
+                    elif(ps._setpoint>0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
+                        v= "POS" if ps._setpoint>=0 else "NEG"
+                        print(f"[{ps.name}] set polarity to {v}")
+                        ps.polarity.put(v)
+                        return
+            
+            if(ps._setstate == ophyd_ps_state.ON):
                 v= ps.encodeStatus(ophyd_ps_state.ON)
                 print(f"[{ps.name}] set mode to ON {v}")
                 ps.mode.put(v)
@@ -63,10 +69,11 @@ class StandbyState(PowerSupplyState):
            
 class OnInit(PowerSupplyState):
     def handle(self, ps):
-        if ps._state == ophyd_ps_state.ON:
-            ps.transition_to(OnState)
-        if ps._state != ophyd_ps_state.UKNOWN:
-            ps.transition_to(StandbyState)
+        if ps._state != None and ps._current!= None:
+            if ps._state == ophyd_ps_state.ON:
+                ps.transition_to(OnState)
+            if ps._state != ophyd_ps_state.UKNOWN:
+                ps.transition_to(StandbyState)
             
 
             
@@ -83,7 +90,7 @@ class OphydPSDante(OphydPS,Device):
     polarity= Cpt(EpicsSignal, ':polarity')
     mode = Cpt(EpicsSignal, ':mode')
 
-    def __init__(self, name,prefix,max=100,min=-100,zero_error=1.5,sim_cycle=1,th_stdby=0.5,th_current=0.01, **kwargs):
+    def __init__(self, name,prefix,max=100,min=-100,bipolar=None,zero_error=1.5,sim_cycle=1,th_stdby=0.5,th_current=0.01, **kwargs):
         """
         Initialize the simulated power supply.
 
@@ -93,13 +100,16 @@ class OphydPSDante(OphydPS,Device):
         Device.__init__(self,prefix, read_attrs=None,
                          configuration_attrs=None,
                          name=name, parent=None, **kwargs)
-        self._current = 0.0
-        self._polarity=-100
-        self._setpoint = 0.0
+        self._current = None
+        self._polarity= None
+        self._setpoint = None
         self._th_stdby=th_stdby # if less equal can switch to stdby
         self._th_current=th_current # The step in setting current
-
         self._bipolar = False
+
+        if bipolar:
+            self._bipolar = bipolar
+            
         self._zero_error= zero_error ## error on zero
         self._setstate = ophyd_ps_state.UKNOWN
         self._state = ophyd_ps_state.UKNOWN
@@ -119,8 +129,8 @@ class OphydPSDante(OphydPS,Device):
         self.run()
         
     def _on_current_change(self, pvname=None, value=None, **kwargs):
-    
-        if self._polarity<2 and self._polarity > -2:
+        
+        if not(self._bipolar) and (self._polarity != None) and (self._polarity<2 and self._polarity > -2):
             self._current = value*self._polarity
         else:
             self._current = value

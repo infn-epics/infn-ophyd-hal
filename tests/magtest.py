@@ -35,23 +35,27 @@ def main():
             ps = PowerSupplyFactory.create(driver,name,prefix=f"{p}:{root}",**params)
             ps.on_current_change = current_change_callback
             ps.on_state_change = state_change_callback
-            ps.set_state("ON")
-            ps.set_current(2)
-            ps.set_current(-2)
             psa.append(ps)
+        
+    time.sleep(20) # see what happens at the beginning
+
+    for p in psa:
+        p.set_state("ON")
+        p.set_current(2)
+        p.set_current(-2)
     
     
-        time.sleep(20)
-        cnt=0
+    time.sleep(20)
+    cnt=0
+    for p in psa:
+        print(f"* {ps.name} reached  current:{p.get_current()}")
+        p.set_state("STANDBY")
+    while cnt<2:
         for p in psa:
-            print(f"* {ps.name} reached  current:{p.get_current()}")
-            p.set_state("STANDBY")
-        while cnt<2:
-            for p in psa:
-                if p.get_state() == "STANDBY":
-                    print(f"* {ps.name} reached  current:{p.get_current()} state {p.get_state()}")
-                    cnt=cnt+1
-            time.sleep(1)
+            if p.get_state() == "STANDBY":
+                print(f"* {ps.name} reached  current:{p.get_current()} state {p.get_state()}")
+                cnt=cnt+1
+        time.sleep(1)
 
 
         
