@@ -9,14 +9,15 @@ class ophyd_ps_state(str, Enum):
     RESET = "RESET"
     INTERLOCK = "INTERLOCK"
     ERROR = "ERROR"
-    UKNOWN = "ERROR"
+    UKNOWN = "UKNOWN"
 
 # Base class for power supply
 class OphydPS():
-    def __init__(self, name, min_current=-10.000, max_current=10000, **kwargs):
+    def __init__(self, name, min_current=-10.000, max_current=10, verbose=0, **kwargs):
         self.min_current = min_current
         self.max_current = max_current
         self.name = name
+        self._verbose=verbose
 
     def set_current(self, value: float):
         """
@@ -48,6 +49,15 @@ class OphydPS():
         print(f"{self.name} to override [OphydPS:get_current]")
 
         return 0
+    
+    def get_features(self) -> dict:
+        """Get the features value."""
+        f={'max':self.max_current,'min':self.min_current,'zero_th':0,'curr_th':0,'slope':self.max_current/10.0}
+        return f
+
+    def wait(self,timeo) -> int:
+        """Wait for setpoint reach with time, 0 wait indefinitively, return negative if timeout"""
+        return 0
 
     def get_state(self) -> ophyd_ps_state:
         """Get the state value."""
@@ -66,6 +76,9 @@ class OphydPS():
         
 class PowerSupplyState(ABC):
     """Abstract base class for power supply states."""
+    def __init__(self):
+        self.last_current_set = None    
+        self.last_state_set = None    
 
     @abstractmethod
     def handle(self, ps):

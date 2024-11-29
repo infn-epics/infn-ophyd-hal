@@ -12,7 +12,22 @@ def current_change_callback(new_value,psa):
 
 def state_change_callback(new_state,psa):
         print(f"{psa.name} State updated to: {new_state}")
+   
+def wait_state(ps,state,tim):
+    now=time.time()
+    
+    while True:
+        diff=time.time() - now
+        if diff> tim:
+            print(f"{ps.name} state {state} not reached in {tim} seconds")
+            return -1
         
+        if ps.get_state()==state:
+            return 0
+        time.sleep(1)
+        
+        
+         
 def main():
     
     parser = argparse.ArgumentParser(description="EPICS Soft IOC for unified power supplies interface ")
@@ -36,29 +51,56 @@ def main():
             ps.on_current_change = current_change_callback
             ps.on_state_change = state_change_callback
             psa.append(ps)
-        
-    time.sleep(20) # see what happens at the beginning
+    print("* Wating 10 s")
+    time.sleep(10) # see what happens at the beginning
+    errs=0
+    ok=0
+    for p in psa:
+        print(f"* {p.name} in {p.get_state()}")
+              
+    for p in psa:
+        if p.get_state()!= "STANDBY":
+            print(f"* {p.name} setting in  STDBY")
+            p.set_state("STANDBY")
+            if p.wait(60)!=0:
+                errs=errs+1
+            
 
+    if errs > 0:
+        print("## failed state test")
+        return -1
+
+    
+
+    
     for p in psa:
         p.set_state("ON")
-        p.set_current(2)
-        p.set_current(-2)
+        if p.wait(60)!=0:
+                return
+        feat=p.get_features()
+        for curr in range(int(feat['min']),int(feat['max'])):
+            print(f"* {p.name} setting current {curr}, waiting {feat['slope']*10} to read back.")
+            p.set_current(curr)
+            p.wait(60)
+            rd=p.get_current()
+            if abs(rd-curr)>feat['curr_th']:
+                print(f"# {p.name} didnt reached setpoint {curr} - readout {rd} = {abs(curr-rd)} > {feat['curr_th']} ")
+                errs = errs+1
+            else:
+                print(f"* {p.name} reached setpoint {curr} - readout {rd} = {abs(curr-rd)} < {feat['curr_th']}")
+                ok = ok +1
+
     
     
-    time.sleep(20)
+    time.sleep(10)
     cnt=0
     for p in psa:
-        print(f"* {ps.name} reached  current:{p.get_current()}")
+        print(f"* {ps.name} reached  current:{p.get_current()} setting STBY")
         p.set_state("STANDBY")
-    while cnt<2:
-        for p in psa:
-            if p.get_state() == "STANDBY":
-                print(f"* {ps.name} reached  current:{p.get_current()} state {p.get_state()}")
-                cnt=cnt+1
-        time.sleep(1)
+        p.wait(60)
 
 
-        
+    print(f"* Result {ok}/{ok+errs} OK")
 
 
 

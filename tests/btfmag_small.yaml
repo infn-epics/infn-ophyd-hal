@@ -8,9 +8,10 @@ magnets:
       type: "QUA"
       desc: "Quadrupole Magnet QUATB004"
       param:
-        max: 5
-        min: -5
+        max: 10
+        min: -10
         th_stdby: 1.5
+        th_current: 0.1
   - QUATB003:
       driver: "dante"
       prefix: "DAFNE:BTF"
@@ -21,7 +22,8 @@ magnets:
       param:
         max: 5
         min: -5
-        th_stdby: 0.5
+        th_stdby: 1.5
+        th_current: 0.1
   
   
   
