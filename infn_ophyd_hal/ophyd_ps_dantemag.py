@@ -62,7 +62,7 @@ class OnState(PowerSupplyState):
 class StandbyState(PowerSupplyState):
     def handle(self, ps):
         ## if state on current under threshold
-        pr=f"{ps.name}[{ps._state_instance.__class__.__name__} {ps._state}] "
+        pr=f"{ps.name}[{ps._state_instance.__class__.__name__} {ps._state}->{ps._setstate}] "
 
         if ps._state == ophyd_ps_state.STANDBY:
             ## fix polarity

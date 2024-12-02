@@ -47,6 +47,7 @@ def main():
             p = details["prefix"]
             root = details["root"]
             params = details.get("param", {})
+            params['verbose']=1
             ps = PowerSupplyFactory.create(driver,name,prefix=f"{p}:{root}",**params)
             ps.on_current_change = current_change_callback
             ps.on_state_change = state_change_callback
@@ -78,7 +79,9 @@ def main():
         if p.wait(60)!=0:
                 return
         feat=p.get_features()
-        for curr in range(int(feat['min']),int(feat['max'])):
+        l=[int(feat['min']),int(feat['max'])]
+        l.extend(range(int(feat['min']),int(feat['max'])))
+        for curr in l:
             print(f"* {p.name} setting current {curr}, waiting {feat['slope']*10} to read back.")
             p.set_current(curr)
             p.wait(60)
