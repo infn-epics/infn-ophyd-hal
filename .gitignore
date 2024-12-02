@@ -4,3 +4,4 @@ __pycache__/
 ophyd-env/
 build/
 *.egg-info
+*.whl
