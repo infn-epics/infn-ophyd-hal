@@ -56,7 +56,7 @@ class OnState(PowerSupplyState):
                         if ps._verbose:
                             print(f"{pr} Bipolar set current to {ps._setpoint}")
 
-        if ps._verbose:      
+        if ps._verbose > 2:      
             print(f"{pr} State: {ps._state} set:{ps._setstate}, Current: {ps._current} set:{ps._setpoint}, Polarity: {ps._polarity} ")
 
 class StandbyState(PowerSupplyState):
@@ -165,7 +165,7 @@ class OphydPSDante(OphydPS,Device):
             self._current = value*self._polarity
         else:
             self._current = value
-        if self._verbose:
+        if self._verbose > 1:
          print(f"{self.name} current changed {value} -> {self._current}")
         self.on_current_change(self._current,self)
 
