@@ -261,8 +261,8 @@ class OphydPSDante(OphydPS,Device):
     
     def set_state(self, state: ophyd_ps_state):    
         pr=f"{self.name}[{self.__class__.__name__}] {self.name}[{self._state_instance.__class__.__name__} {self._state}]"
-        self._state_instance.last_state_set=None
-        self._state_instance.last_current_set=None
+        # self._state_instance.last_state_set=None
+        # self._state_instance.last_current_set=None
 
         self._setstate = state
         print(f"{pr} state setpoint \"{state}\"")
