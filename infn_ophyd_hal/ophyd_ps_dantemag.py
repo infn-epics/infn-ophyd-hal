@@ -33,7 +33,7 @@ class OnState(PowerSupplyState):
         ## handle change state
         pr=f"{ps.name}[{ps._state_instance.__class__.__name__} {ps._state}]"
 
-        if (ps._setstate == ophyd_ps_state.STANDBY) or (ps._setstate == ophyd_ps_state.OFF) or (ps._setstate == ophyd_ps_state.RESET)
+        if (ps._setstate == ophyd_ps_state.STANDBY) or (ps._setstate == ophyd_ps_state.OFF) or (ps._setstate == ophyd_ps_state.RESET):
             ps.transition_to(ZeroStandby)
         
         elif ps._state == ophyd_ps_state.ON:
