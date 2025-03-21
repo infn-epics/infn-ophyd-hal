@@ -33,7 +33,7 @@ class OnState(PowerSupplyState):
         ## handle change state
         pr=f"{ps.name}[{ps._state_instance.__class__.__name__} {ps._state}]"
 
-        if ps._setstate == ophyd_ps_state.STANDBY:
+        if (ps._setstate == ophyd_ps_state.STANDBY) or (ps._setstate == ophyd_ps_state.OFF) or (ps._setstate == ophyd_ps_state.RESET)
             ps.transition_to(ZeroStandby)
         
         elif ps._state == ophyd_ps_state.ON:
@@ -67,6 +67,14 @@ class StandbyState(PowerSupplyState):
         if ps._state == ophyd_ps_state.STANDBY:
             ## fix polarity
             ## fix state
+            if(ps._setstate == ophyd_ps_state.RESET):
+                if self.last_state_set!=ophyd_ps_state.RESET:
+                    if ps._verbose:
+                        print(f"{pr} set mode to RESET")
+                    ps.mode.put(ps.encodeStatus(ophyd_ps_state.RESET))
+                    self.last_state_set=ophyd_ps_state.RESET
+                return
+
             if not(ps._bipolar):
                 if (ps._setpoint!= None):
                     if ps._setpoint==0:
@@ -94,7 +102,6 @@ class StandbyState(PowerSupplyState):
                     ps.mode.put(v)
                     self.last_state_set=ps._setstate
 
-           
 class OnInit(PowerSupplyState):
     def handle(self, ps):
         if ps._verbose:
