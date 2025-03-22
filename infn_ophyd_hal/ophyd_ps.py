@@ -18,6 +18,8 @@ class OphydPS():
         self.max_current = max_current
         self.name = name
         self._verbose=verbose
+        self.last_current_set = None
+        self.last_state_set = None
 
     def set_current(self, value: float):
         """
@@ -77,8 +79,9 @@ class OphydPS():
 class PowerSupplyState(ABC):
     """Abstract base class for power supply states."""
     def __init__(self):
-        self.last_current_set = None    
-        self.last_state_set = None    
+        # Initialize the state
+        self.state = None
+        
 
     @abstractmethod
     def handle(self, ps):

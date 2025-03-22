@@ -2,15 +2,17 @@ from infn_ophyd_hal import PowerSupplyFactory,ophyd_ps_state
 import time
 import yaml
 import argparse
-
+verbose=1
 def load_config(filename):
     with open(filename, "r") as f:
         return yaml.safe_load(f)
 
 def current_change_callback(new_value,psa):
-        print(f"[{psa.name} Current updated to: {new_value:.2f} A")
+        if verbose>1:
+            print(f"[{psa.name}] Current updated to: {new_value:.2f} A")
 
 def state_change_callback(new_state,psa):
+    if verbose:
         print(f"{psa.name} State updated to: {new_state}")
    
 def wait_state(ps,state,tim):

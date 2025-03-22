@@ -1,29 +1,95 @@
 uniprefix: "UNISIM"
 magnets:
-  - QUATB004:
+  - QUATB206:
       driver: "dante"
       prefix: "DAFNE:BTF"
-      root: "QUATB004"
-      zone: "TM"
+      root: "QUATB206"
+      zone: "TB"
       type: "QUA"
-      desc: "Quadrupole Magnet QUATB004"
+      desc: "Quadrupole Magnet QUATB206"
       param:
         max: 10
         min: -10
-        th_stdby: 1.5
-        th_current: 0.1
-  - QUATB003:
+  - QUATB205:
       driver: "dante"
       prefix: "DAFNE:BTF"
-      root: "QUATB003"
-      zone: "TM"
+      root: "QUATB205"
+      zone: "TB"
       type: "QUA"
-      desc: "Quadrupole Magnet QUATB003"
+      desc: "Quadrupole Magnet QUATB205"
       param:
-        max: 5
-        min: -5
-        th_stdby: 1.5
-        th_current: 0.1
+        max: 10
+        min: -10
+  - QUATB204:
+      driver: "dante"
+      prefix: "DAFNE:BTF"
+      root: "QUATB204"
+      zone: "TB"
+      type: "QUA"
+      desc: "Quadrupole Magnet QUATB204"
+      param:
+        max: 10
+        min: -10
+  - QUATB203:
+      driver: "dante"
+      prefix: "DAFNE:BTF"
+      root: "QUATB203"
+      zone: "TB"
+      type: "QUA"
+      desc: "Quadrupole Magnet QUATB203"
+      param:
+        max: 10
+        min: -10
+  - QUATB202:
+      driver: "dante"
+      prefix: "DAFNE:BTF"
+      root: "QUATB202"
+      zone: "TB"
+      type: "QUA"
+      desc: "Quadrupole Magnet QUATB202"
+      param:
+        max: 10
+        min: -10
+  - QUATB201:
+      driver: "dante"
+      prefix: "DAFNE:BTF"
+      root: "QUATB201"
+      zone: "TB"
+      type: "QUA"
+      desc: "Quadrupole Magnet QUATB201"
+      param:
+        max: 10
+        min: -10
+  - CVVTB201:
+      driver: "dante"
+      prefix: "DAFNE:BTF"
+      root: "CVVTB201"
+      zone: "TB"
+      type: "COR"
+      desc: "Corrector Magnet CVVTB001"
+      param:
+        max: 16.67
+        min: -16.67
+  - CHHTB201:
+      driver: "dante"
+      prefix: "DAFNE:BTF"
+      root: "CHHTB201"
+      zone: "TB"
+      type: "COR"
+      desc: "Corrector Magnet CHHTB001"
+      param:
+        max: 16.67
+        min: -16.67
+  - DHSTB203:
+      driver: "dante"
+      prefix: "DAFNE:BTF"
+      root: "DHSTB203"
+      zone: "TB"
+      type: "QUA"
+      desc: "Quadrupole Magnet DHSTB203"
+      param:
+        max: 10
+        min: -10
   
   
   
