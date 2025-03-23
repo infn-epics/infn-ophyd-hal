@@ -9,20 +9,37 @@ from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO,Positione
 
 class ZeroStandby(PowerSupplyState):
     def handle(self, ps):
-        pr=f"{ps.name}[{ps._state_instance.__class__.__name__} {ps._state}]"
+        pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set}]"
         if abs(ps.get_current())<=ps._th_stdby:
+                if ps._verbose:
+                    print(f"{pr} Current: {ps._current:.2f} < threshold {ps._th_stdby} putting in STANDBY ")
+                ps.mode.put(ps.encodeStatus(ophyd_ps_state.STANDBY))
+                ps.transition_to(waitStandby)
+                ps.last_state_set = None
+
+class waitStandby(PowerSupplyState):
+        def handle(self, ps):
+            pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set}]"
+
             if ps._verbose:
-                print(f"{pr} Current: {ps._current:.2f} < threshold {ps._th_stdby} putting in STANDBY ")
-            ps.mode.put(ps.encodeStatus(ophyd_ps_state.STANDBY))
-            ps.last_state_set=None
+                    print(f"{pr} Current: {ps._current:.2f} Stage {ps._state} duration {self.duration()}")
+            if ps._state == ophyd_ps_state.STANDBY:
+                ps.transition_to(StandbyState)
+            if self.duration() > ps.timeout_mode_change/2:
+                ps.mode.put(ps.encodeStatus(ophyd_ps_state.STANDBY))
 
+            if self.duration() > ps.timeout_mode_change:
+                print(f"## {pr} FAILED to GO IN STANDBY Current: {ps._current:.2f} Stage {ps._state} duration {self.duration()}")
 
-
+                ps.last_state_set = ophyd_ps_state.STANDBY
+                if ps._state == ophyd_ps_state.ON:
+                    ps.transition_to(OnState)
+                    
 class OnState(PowerSupplyState):
     
     def handle(self, ps):
         ## handle change state
-        pr=f"{ps.name}[{ps._state_instance.__class__.__name__} {ps._state}] last:{ps.last_state_set}"
+        pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set}]"
 
         if ((ps._setstate == ophyd_ps_state.STANDBY) or (ps._setstate == ophyd_ps_state.OFF) or (ps._setstate == ophyd_ps_state.RESET)) and ps.last_state_set == None:
             ps.current.put(0)
@@ -55,7 +72,7 @@ class OnState(PowerSupplyState):
 class StandbyState(PowerSupplyState):
     def handle(self, ps):
         ## if state on current under threshold
-        pr=f"{ps.name}[{ps._state_instance.__class__.__name__} {ps._state}->{ps._setstate}] last:{ps.last_state_set}"
+        pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set}]"
 
         if ps._state == ophyd_ps_state.STANDBY:
             ## fix polarity
@@ -69,26 +86,38 @@ class StandbyState(PowerSupplyState):
 
             if not(ps._bipolar):
                 if (ps._setpoint!= None) and (ps.last_polarity_set==None):
-                    if ps._setpoint==0:
-                            if ps._verbose:
-                                print(f"{pr} set polarity to 0")
-                            ps.polarity.put("OPEN")
-                            ps.last_polarity_set="OPEN"
-                            return
-                    elif(ps._setpoint>0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
-                        v= "POS" if ps._setpoint>=0 else "NEG"
+                    
+                    if(ps._setpoint>0 and ps._polarity==-1) or (ps._setpoint<0 and ps._polarity==1):
+                        if ps._setpoint>0:
+                            v= "POS"
+                            ps.last_polarity_set=1
+                        elif ps._setpoint<0:
+                            v="NEG"
+                            ps.last_polarity_set=-1
+
+                        else:
+                            ps.last_polarity_set=0
+                            v= "OPN"
+
+
                         if ps._verbose:
                             print(f"{pr} set polarity to {v}")
                         ps.polarity.put(v)
-                        ps.last_polarity_set=v
+
                         return
+                    # elif ps._setpoint==0:
+                    #     if ps._verbose:
+                    #         print(f"{pr} set polarity to 0")
+                    #     ps.polarity.put("OPEN")
+                    #     ps.last_polarity_set="OPEN"
+                    #     return
             
-            if(ps._setstate == ophyd_ps_state.ON) and ps.last_state_set == None:
+            if(ps._setstate == ophyd_ps_state.ON) and ps.last_state_set == None :
                 v= ps.encodeStatus(ophyd_ps_state.ON)
                 if ps._verbose:
                     print(f"{pr} set mode to ON {v}")
                 ps.mode.put(v)
-                ps.last_state_set=v
+                ps.last_state_set=ophyd_ps_state.ON
 
 class OnInit(PowerSupplyState):
     def handle(self, ps):
@@ -106,7 +135,9 @@ class OnInit(PowerSupplyState):
 
 class ErrorState(PowerSupplyState):
     def handle(self, ps):
-        print(f"[{ps.name}] Error encountered. Current: {ps._current:.2f}")
+        pr=f"{ps.name}[{self._state_instance.state} {ps._setstate} {ps.last_state_set}]"
+
+        print(f"{pr} Error encountered. Current: {ps._current:.2f}")
         
 class OphydPSDante(OphydPS,Device):
     current_rb = Cpt(EpicsSignalRO, ':current_rb')
@@ -133,6 +164,7 @@ class OphydPSDante(OphydPS,Device):
         self._th_current=th_current # The step in setting current
         self._bipolar = False
         self.last_polarity_set=None
+        self.timeout_mode_change=20
         
         if bipolar:
             self._bipolar = bipolar
@@ -169,7 +201,7 @@ class OphydPSDante(OphydPS,Device):
         """Transition to a new state."""
         self._state_instance = new_state_class()
         if self._verbose:
-            print(f"[{self.name}] Transitioning to {self._state_instance.__class__.__name__}.")
+            print(f"[{self.name}] Transitioning to {self._state_instance.state}.")
 
     def encodeStatus(self,value):
         if value == ophyd_ps_state.ON:
@@ -192,17 +224,31 @@ class OphydPSDante(OphydPS,Device):
         
     def _on_pol_change(self, pvname=None, value=None, **kwargs):
         self._polarity = value
+        pr=f"{self.name}[{self._state_instance.state} {self._setstate} {self.last_state_set}]"
+
         if self._polarity == 3 and self._bipolar == False:
             self._bipolar = True
             print(f"{self.name} is bipolar")
         if self._verbose:
-            print(f"{self.name} polarity changed {value}")
+            print(f"{pr}  polarity changed {value} set state {self._setstate}")
+        if self._polarity != self.last_polarity_set:
+            print(f"{self.name} external change last polarity {self.last_polarity_set}")
+            self._setpoint = self._current*self._polarity
+            self.last_polarity_set = self._polarity
+            
+            
     def _on_mode_change(self, pvname=None, value=None, **kwargs):
         
         self._state=self.decodeStatus(value)
         self._mode = value
+        pr=f"{self.name}[{self._state_instance.state} {self._setstate} {self.last_state_set}]"
+
         if self._verbose:
-            print(f"{self.name} mode changed {value} -> {self._state}")
+            print(f"{pr} mode changed {value} -> {self._state} setstate {self._setstate}")
+        if self._state != self.last_state_set and self._state_instance.state!="waitStandby":  
+            print(f"{self.name} external change last state {self.last_state_set}")
+            self._setstate = self._state
+            self.last_state_set = self._state
 
         self.on_state_change(self._state,self)
         if(self._state==ophyd_ps_state.ON):
@@ -224,7 +270,7 @@ class OphydPSDante(OphydPS,Device):
         self.last_polarity_set=None
 
         """ setting the current."""
-        pr=f"{self.name}[{self.__class__.__name__}] {self.name}[{self._state_instance.__class__.__name__} {self._state}]"
+        pr=f"{self.name}[{self.__class__.__name__}] {self.name}[{self._state_instance.state} {self._state}]"
 
         super().set_current(value)  # Check against min/max limits
         print(f"{pr} setpoint current {value} ")
@@ -247,11 +293,13 @@ class OphydPSDante(OphydPS,Device):
                     return 0
             
             if timeo>0 and (time.time() - start_time > timeo):
+                if self._verbose:
+                    print (f"[{self.name}] ## wait {self._setstate} == {self._state} and ({self._current} - {self._setpoint})={val} < {self._th_current} in {timeo} sec.")
                 return -1
             time.sleep(0.5)
     
     def set_state(self, state: ophyd_ps_state):    
-        pr=f"{self.name}[{self.__class__.__name__}] {self.name}[{self._state_instance.__class__.__name__} {self._state}]"
+        pr=f"{self.name}[{self.__class__.__name__}] {self.name}[{self._state_instance.state} {self._state}]"
         self.last_state_set=None
         self._setstate = state
         print(f"{pr} state setpoint \"{state}\"")

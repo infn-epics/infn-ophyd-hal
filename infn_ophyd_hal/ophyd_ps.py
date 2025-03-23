@@ -1,5 +1,6 @@
 from enum import Enum
 from abc import ABC, abstractmethod
+import time
 
 # Enum for power supply states
 class ophyd_ps_state(str, Enum):
@@ -80,9 +81,12 @@ class PowerSupplyState(ABC):
     """Abstract base class for power supply states."""
     def __init__(self):
         # Initialize the state
-        self.state = None
-        
+        self.state = self.__class__.__name__
+        self.start = time.time()
 
+    def duration(self):
+        return time.time() - self.start
+    
     @abstractmethod
     def handle(self, ps):
         """Perform actions specific to the current state."""
