@@ -54,7 +54,6 @@ def load_csvconfig(filename):
                 "driver": row["Driver"],
                 "desc": desc
             }})
-   
     return selection
 def load_config(filename):
     with open(filename, "r") as f:
