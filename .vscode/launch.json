@@ -61,6 +61,20 @@
                  "EPICS_CA_ADDR_LIST": "192.168.36.203", // BTF
                  "EPICS_CA_AUTO_ADDR_LIST":"NO"
              }
+        },
+        {
+            "name": "Python: test PS SPARC DANTE",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "tests/magtest.py",
+            "console": "integratedTerminal",
+            "args": ["tests/sparcmag.csv","--regexp","PTLQUA.+","--verbose","1"],
+            "justMyCode": true,
+             "env": {
+                 "EPICS_CA_ADDR_LIST": "192.168.36.201", // SPARC
+                 "EPICS_CA_AUTO_ADDR_LIST":"NO"
+             }
         }
 
 

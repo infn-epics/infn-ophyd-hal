@@ -39,7 +39,7 @@ class OnState(PowerSupplyState):
     
     def handle(self, ps):
         ## handle change state
-        pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set}]"
+        pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set} bipolar {ps._bipolar} polarity {ps._polarity}]"
 
         if ((ps._setstate == ophyd_ps_state.STANDBY) or (ps._setstate == ophyd_ps_state.OFF) or (ps._setstate == ophyd_ps_state.RESET)) and ps.last_state_set == None:
             ps.current.put(0)
@@ -72,7 +72,7 @@ class OnState(PowerSupplyState):
 class StandbyState(PowerSupplyState):
     def handle(self, ps):
         ## if state on current under threshold
-        pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set}]"
+        pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set} bipolar {ps._bipolar} polarity {ps._polarity}]"
 
         if ps._state == ophyd_ps_state.STANDBY:
             ## fix polarity
@@ -124,19 +124,19 @@ class OnInit(PowerSupplyState):
         if ps._verbose:
             print(f"{ps.name}[{ps._state_instance.__class__.__name__}]")
 
-        if ps._state != None and ps._current!= None:
-            if ps._state == ophyd_ps_state.ON:
-                ps.transition_to(OnState)
-            if ps._state != ophyd_ps_state.UKNOWN:
-                ps.transition_to(StandbyState)
+        # if ps._state != None and ps._current!= None:
+        #     if ps._state == ophyd_ps_state.ON:
+        #         ps.transition_to(OnState)
+        #     elif ps._state != ophyd_ps_state.UKNOWN:
+        #         ps.transition_to(StandbyState)
             
 
             
 
 class ErrorState(PowerSupplyState):
     def handle(self, ps):
-        pr=f"{ps.name}[{self._state_instance.state} {ps._setstate} {ps.last_state_set}]"
-
+        
+        pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set}]"
         print(f"{pr} Error encountered. Current: {ps._current:.2f}")
         
 class OphydPSDante(OphydPS,Device):
@@ -178,12 +178,22 @@ class OphydPSDante(OphydPS,Device):
         self._simcycle=sim_cycle
 
         self._state_instance=OnInit()
+        self.transition_to(OnInit)
+
         self.current_rb.subscribe(self._on_current_change)
         self.polarity_rb.subscribe(self._on_pol_change)
         self.mode_rb.subscribe(self._on_mode_change)
+        ## access all variable to check if they exist
+        self._current = self.current_rb.get()
+        self._polarity= self.polarity_rb.get()
+        self._setpoint= self.current.get()
+        self._mode = self.mode.get()
 
-        self.transition_to(OnInit)
-        print(f"* creating Dante Mag {name} as {prefix}")
+        self._state=self.decodeStatus(self.mode_rb.get())
+        self._mode = self.mode_rb.get()
+        self._setpoint= self.current_rb.get()
+
+        print(f"* creating Dante Mag {name} as {prefix} min={min},max={max} state: {self._state}")
 
         self.run()
         
@@ -194,7 +204,7 @@ class OphydPSDante(OphydPS,Device):
         else:
             self._current = value
         if self._verbose > 1:
-         print(f"{self.name} current changed {value} -> {self._current}")
+         print(f"{self.name} current changed {value} setpoint: {self.setpoint} delta: {self._current - self._setpoint}")
         self.on_current_change(self._current,self)
 
     def transition_to(self, new_state_class):
@@ -273,7 +283,7 @@ class OphydPSDante(OphydPS,Device):
         pr=f"{self.name}[{self.__class__.__name__}] {self.name}[{self._state_instance.state} {self._state}]"
 
         super().set_current(value)  # Check against min/max limits
-        print(f"{pr} setpoint current {value} ")
+        print(f"{pr} setpoint current {value} bipolar {self._bipolar} polarity {self._polarity}")
         self._setpoint = value
         
     def wait(self,timeo) -> int:
@@ -286,6 +296,8 @@ class OphydPSDante(OphydPS,Device):
             print (f"[{self.name}] wait {self._setstate} == {self._state} and ({self._current} - {self._setpoint})={val} < {self._th_current} in {timeo} sec.")
         while True:
             if self._current!=None and self._setpoint != None:
+                if self._setstate == "STANDBY" and self._state == "STANDBY":
+                    return 0
                 if self._setstate == self._state and (abs(self._current - self._setpoint)<=self._th_current):
                     return 0
             else:
