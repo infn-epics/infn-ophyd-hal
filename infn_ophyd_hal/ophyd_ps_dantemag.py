@@ -204,7 +204,7 @@ class OphydPSDante(OphydPS,Device):
         else:
             self._current = value
         if self._verbose > 1:
-         print(f"{self.name} current changed {value} setpoint: {self._setpoint} delta: {self._current - self._setpoint}")
+         print(f"{self.name} current changed {value} setpoint: {self._setpoint}")
         self.on_current_change(self._current,self)
 
     def transition_to(self, new_state_class):
