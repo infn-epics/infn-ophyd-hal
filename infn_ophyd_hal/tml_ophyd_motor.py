@@ -70,7 +70,7 @@ class OphydTmlMotor(Device, PositionerBase):
         self.mot_stat_value = self.mot_stat.get()
         self.mot_msta_value = self.mot_msta.get()
         #logging.debug(f"{name} State:\n{self.decode()}")
-        self.enable()
+        # self.enable()
         
     def stage(self):
         logging.info(f"{self.name} State:\n{self.decode()}")
