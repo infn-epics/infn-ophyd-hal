@@ -1,9 +1,10 @@
 from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO
+import logging
 
 
 class OphydDI(Device):
     """Digital Input: read-only boolean/value at ':DI'."""
-    user_readback = Cpt(EpicsSignalRO, ':DI')
+    user_readback = Cpt(EpicsSignalRO, ':DI_RB')
     
     def get(self):
         """Get current digital input value."""
@@ -11,8 +12,8 @@ class OphydDI(Device):
 
 
 class OphydDO(Device):
-    """Digital Output: writable boolean/value at ':DO'."""
-    user_setpoint = Cpt(EpicsSignal, ':DO')
+    """Digital Output: writable boolean/value at ':DO_SP'."""
+    user_setpoint = Cpt(EpicsSignal, ':DO_SP')
     
     def get(self):
         """Get current digital output value."""
@@ -20,12 +21,13 @@ class OphydDO(Device):
     
     def set(self, value):
         """Set digital output value."""
+        logging.info(f"Setting {self.name} digital output to {value}")
         return self.user_setpoint.set(value)
 
 
 class OphydAI(Device):
-    """Analog Input: read-only float at ':AI'."""
-    user_readback = Cpt(EpicsSignalRO, ':AI')
+    """Analog Input: read-only float at ':AI_RB'."""
+    user_readback = Cpt(EpicsSignalRO, ':AI_RB')
     
     def get(self):
         """Get current analog input value."""
@@ -33,8 +35,8 @@ class OphydAI(Device):
 
 
 class OphydAO(Device):
-    """Analog Output: writable float at ':AO'."""
-    user_setpoint = Cpt(EpicsSignal, ':AO')
+    """Analog Output: writable float at ':AO_SP'."""
+    user_setpoint = Cpt(EpicsSignal, ':AO_SP')
     
     def get(self):
         """Get current analog output value."""
@@ -42,6 +44,7 @@ class OphydAO(Device):
     
     def set(self, value):
         """Set analog output value."""
+        logging.info(f"Setting {self.name} analog output to {value}")
         return self.user_setpoint.set(value)
 
 

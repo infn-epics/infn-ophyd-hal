@@ -6,6 +6,21 @@
     "configurations": [
         
         {
+            "name": "Python: test io",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "tests/testio.py",
+            "args": ["do", "SPARC:SHT:ICP:CATLAS01"],
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/ophyd-env/bin/python",
+            "justMyCode": true,
+            "env": {
+                "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
+                "EPICS_CA_AUTO_ADDR_LIST":"NO"
+            }
+        },
+        {
             "name": "Python: test motor",
             "type": "python",
             "request": "launch",
@@ -15,7 +30,7 @@
             "python": "${workspaceFolder}/ophyd-env/bin/python",
             "justMyCode": true,
             "env": {
-                "EPICS_CA_ADDR_LIST": "192.168.36.201", // SPARC
+                "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
                 "EPICS_CA_AUTO_ADDR_LIST":"NO"
             }
         },
@@ -30,7 +45,7 @@
             "python": "${workspaceFolder}/ophyd-env/bin/python",
             "justMyCode": true,
             "env": {
-                "EPICS_CA_ADDR_LIST": "192.168.36.201", // SPARC
+                "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
                 "EPICS_CA_AUTO_ADDR_LIST":"NO"
             }
         },
@@ -44,7 +59,7 @@
             // "python": "${workspaceFolder}/ophyd-env/bin/python",
             "justMyCode": true
             // "env": {
-            //     "EPICS_CA_ADDR_LIST": "192.168.36.201", // SPARC
+            //     "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
             //     "EPICS_CA_AUTO_ADDR_LIST":"NO"
             // }
         },
@@ -72,7 +87,7 @@
             "args": ["tests/sparcmag.csv","--regexp","PTLQUA.+","--verbose","1"],
             "justMyCode": true,
              "env": {
-                 "EPICS_CA_ADDR_LIST": "192.168.36.201", // SPARC
+                 "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
                  "EPICS_CA_AUTO_ADDR_LIST":"NO"
              }
         }
