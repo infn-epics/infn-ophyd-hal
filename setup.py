@@ -1,8 +1,10 @@
 from setuptools import setup, find_packages
 
+__version__ = "2.12.1"
+
 setup(
     name="infn_ophyd_hal",
-    version="2.11.3",
+    version=__version__,
     description="Ophyd HAL for controlling motors, cameras, magnets... specifically INFN facilities",
     author="Andrea Michelotti", 
     author_email="andrea.michelotti@infn.it", 
@@ -11,7 +13,8 @@ setup(
     install_requires=[
         "ophyd",
         "asyncio",
-        "pyepics"
+        "pyepics",
+        "pyyaml>=6.0"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
