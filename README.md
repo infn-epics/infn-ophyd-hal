@@ -11,6 +11,8 @@ This package dramatically simplifies:
 
 The library provides Ophyd-based device classes that abstract common hardware used in particle accelerators and beamlines. Each device class provides a uniform interface to interact with EPICS PVs, making it easy to integrate hardware into Python-based control systems.
 
+All device classes inherit from a common base class `epik8sDevice`, ensuring consistent initialization patterns and standardized behavior across all hardware abstractions.
+
 ### Key Features
 
 - **Unified Device Interface** - All devices expose standard `get()` and `set()` methods
@@ -18,6 +20,7 @@ The library provides Ophyd-based device classes that abstract common hardware us
 - **EPICS Native** - Direct integration with EPICS control systems
 - **Type-Safe** - Full type hints for better IDE support and code quality
 - **Extensible** - Easy to add new device types
+- **Standardized Base Class** - All devices inherit from `epik8sDevice` for consistent behavior
 
 ## Installation
 
@@ -374,16 +377,18 @@ Required GitHub secrets:
 
 ### Device Hierarchy
 
+All device classes inherit from a common base class `epik8sDevice`, which provides standardized initialization and common functionality:
+
 ```
-Device (Ophyd base)
-├── OphydMotor
-│   └── OphydTmlMotor
-├── OphydPS
-│   ├── OphydPSDante
-│   ├── OphydPSUnimag
-│   └── OphydPSSim
-├── OphydBPM
-└── I/O Devices
+ophyd.Device
+    ↓
+epik8sDevice (base class)
+    ↓
+    ├── OphydTmlMotor (also PositionerBase)
+    ├── OphydPSDante (also OphydPS)
+    ├── OphydPSUnimag (also OphydPS)
+    ├── OphydPSSim (also OphydPS)
+    ├── SppOphydBpm
     ├── OphydDI
     ├── OphydDO
     ├── OphydAI
@@ -397,20 +402,30 @@ Device (Ophyd base)
 2. **EpicsSignal**: Read-write EPICS PV
 3. **EpicsSignalRO**: Read-only EPICS PV
 4. **Device**: Container for related signals
+5. **epik8sDevice**: Standardized base class for all INFN Ophyd devices
 
 ### Extending the Library
 
-To add a new device type:
+To add a new device type, inherit from `epik8sDevice` instead of `Device` directly:
 
 ```python
-from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO
+from ophyd import Component as Cpt, EpicsSignal, EpicsSignalRO
+from .epik8s_device import epik8sDevice
 
-class OphydMyDevice(Device):
+class OphydMyDevice(epik8sDevice):
     """My custom device."""
     
     # Define components
     readback = Cpt(EpicsSignalRO, ':RB')
     setpoint = Cpt(EpicsSignal, ':SP')
+    
+    def __init__(self, prefix, read_attrs=None, configuration_attrs=None, 
+                 name=None, parent=None, **kwargs):
+        if read_attrs is None:
+            read_attrs = ['readback']
+        super().__init__(prefix, read_attrs=read_attrs, 
+                         configuration_attrs=configuration_attrs,
+                         name=name, parent=parent, **kwargs)
     
     def get(self):
         """Get current value."""
@@ -430,9 +445,6 @@ __all__ = [
     # ... existing exports
     'OphydMyDevice',
 ]
-
-# Register in factory
-DEVICE_REGISTRY['my_device_type'] = OphydMyDevice
 ```
 
 ## Support and Contributing

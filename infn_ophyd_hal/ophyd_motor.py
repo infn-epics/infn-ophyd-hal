@@ -1,15 +1,15 @@
 # infn_ophyd_hal/motor.py
 
-from ophyd import PositionerBase
+from ophyd import PositionerBase, DisconnectedError
 from ophyd.utils.epics_pvs import raise_if_disconnected
 
 from ophyd import Component as Cp
-from ophyd import Device
+from .epik8s_device import epik8sDevice
 from abc import ABC, abstractmethod
 
 
 
-class ophyMotor(Device, PositionerBase):
+class ophyMotor(epik8sDevice, PositionerBase):
     '''An EPICS motor record, wrapped in a :class:`Positioner`
 
     Keyword arguments are passed through to the base class, Positioner
@@ -33,7 +33,11 @@ class ophyMotor(Device, PositionerBase):
     
     def __init__(self, prefix, *, read_attrs=None, configuration_attrs=None,
                  name=None, parent=None, **kwargs):
-        pass
+        if read_attrs is None:
+            read_attrs = []
+        super().__init__(prefix, read_attrs=read_attrs,
+                         configuration_attrs=configuration_attrs,
+                         name=name, parent=parent, **kwargs)
 
         
 

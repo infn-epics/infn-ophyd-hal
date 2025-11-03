@@ -1,11 +1,12 @@
 from typing import Union
 
-from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO
+from ophyd import Component as Cpt, EpicsSignal, EpicsSignalRO
+from .epik8s_device import epik8sDevice
 
 from infn_ophyd_hal import OphydPS, ophyd_ps_state
 
 
-class OphydPSUnimag(OphydPS, Device):
+class OphydPSUnimag(OphydPS, epik8sDevice):
     """
     Generic UNIMAG magnet power supply interface using straightforward PVs:
 
@@ -37,7 +38,7 @@ class OphydPSUnimag(OphydPS, Device):
         OphydPS.__init__(self, name=name, min_current=min, max_current=max, verbose=verbose, **kwargs)
 
         # Initialize ophyd Device with this prefix
-        Device.__init__(
+        epik8sDevice.__init__(
             self,
             prefix,
             read_attrs=None,

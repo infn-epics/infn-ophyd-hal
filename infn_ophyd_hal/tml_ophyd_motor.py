@@ -1,7 +1,8 @@
-from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO,PositionerBase
-from ophyd.status import MoveStatus,Status
+from ophyd import Component as Cpt, EpicsSignal, EpicsSignalRO, PositionerBase
+from ophyd.status import MoveStatus, Status
+from .epik8s_device import epik8sDevice
 
-import logging,time
+import logging, time
 logger = logging.getLogger(__name__)
 # Constants for motor commands and states
 MAX_RETRIES=3
@@ -25,7 +26,7 @@ RUN = 1
 STOP = 2
 POS_TOLERANCE = 10
 
-class OphydTmlMotor(Device, PositionerBase):
+class OphydTmlMotor(epik8sDevice, PositionerBase):
     
     mot_msta = Cpt(EpicsSignalRO, ":MSTA")
     mot_stat = Cpt(EpicsSignalRO, ":STAT")

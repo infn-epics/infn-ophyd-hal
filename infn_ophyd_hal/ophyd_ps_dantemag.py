@@ -1,8 +1,9 @@
 import time
 import random
 from threading import Thread
-from infn_ophyd_hal import OphydPS,ophyd_ps_state,PowerSupplyState
-from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO,PositionerBase
+from infn_ophyd_hal import OphydPS, ophyd_ps_state, PowerSupplyState
+from ophyd import Component as Cpt, EpicsSignal, EpicsSignalRO
+from .epik8s_device import epik8sDevice
 
 
 
@@ -139,7 +140,7 @@ class ErrorState(PowerSupplyState):
         pr=f"{ps.name}[{ps._state_instance.state} {ps._setstate} {ps.last_state_set}]"
         print(f"{pr} Error encountered. Current: {ps._current:.2f}")
         
-class OphydPSDante(OphydPS,Device):
+class OphydPSDante(OphydPS, epik8sDevice):
     current_rb = Cpt(EpicsSignalRO, ':current_rb')
     polarity_rb = Cpt(EpicsSignalRO, ':polarity_rb')
     mode_rb = Cpt(EpicsSignalRO, ':mode_rb')
@@ -147,16 +148,22 @@ class OphydPSDante(OphydPS,Device):
     polarity= Cpt(EpicsSignal, ':polarity')
     mode = Cpt(EpicsSignal, ':mode')
 
-    def __init__(self, name,prefix,max=10,min=-10,bipolar=None,verbose=0,zero_error=1.5,sim_cycle=1,th_stdby=0.5,th_current=0.01, **kwargs):
+    def __init__(self, name, prefix, max=10, min=-10, bipolar=None, verbose=0, zero_error=1.5, sim_cycle=1, th_stdby=0.5, th_current=0.01, **kwargs):
         """
         Initialize the simulated power supply.
 
         :param uncertainty_percentage: Percentage to add random fluctuations to current.
         """
-        OphydPS.__init__(self,name=name, min_current=min,max_current=max,verbose=verbose,**kwargs)
-        Device.__init__(self,prefix, read_attrs=None,
-                         configuration_attrs=None,
-                         name=name, parent=None, **kwargs)
+        OphydPS.__init__(self, name=name, min_current=min, max_current=max, verbose=verbose, **kwargs)
+        epik8sDevice.__init__(
+            self,
+            prefix,
+            read_attrs=None,
+            configuration_attrs=None,
+            name=name,
+            parent=None,
+            **kwargs
+        )
         self._current = None
         self._polarity= None
         self._setpoint = None
