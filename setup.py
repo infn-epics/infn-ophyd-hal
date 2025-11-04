@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-__version__ = "2.12.1"
+__version__ = "2.12.2"
 
 setup(
     name="infn_ophyd_hal",
@@ -14,7 +14,7 @@ setup(
         "ophyd",
         "asyncio",
         "pyepics",
-        "pyyaml>=6.0"
+        "pyyaml"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

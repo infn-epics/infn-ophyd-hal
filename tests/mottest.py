@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Magnet/power supply test script.
+Motor test script.
 
-This script creates magnet devices from a beamline configuration and tests
-basic power supply operations like reading current, state, and setting values.
+This script creates motor devices from a beamline configuration and tests
+basic motor operations like reading position, moving, homing, and checking status.
 """
 
 import argparse
@@ -11,22 +11,17 @@ import logging
 from infn_ophyd_hal.device_factory import DeviceFactory, create_devices_from_beamline_config
 
 
-def on_current_change(timestamp=None, value=None, **kwargs):
-    """Callback for current changes."""
-    print(f"Current changed: {value}")
-
-
-def on_state_change(timestamp=None, value=None, **kwargs):
-    """Callback for state changes."""
-    print(f"State changed: {value}")
+def on_position_change(timestamp=None, value=None, **kwargs):
+    """Callback for position changes."""
+    print(f"Position changed: {value}")
 
 
 def main():
-    """Entry point for the magnet test script.
+    """Entry point for the motor test script.
 
     Accepts application parameters for configuration file and log level/debug flag.
     """
-    parser = argparse.ArgumentParser(description="Magnet test runner")
+    parser = argparse.ArgumentParser(description="Motor test runner")
     parser.add_argument("--config", "-c", default="sparc_beamline.yaml",
                         help="Path to beamline YAML configuration file (default: sparc_beamline.yaml)")
 
@@ -46,23 +41,30 @@ def main():
 
     # Create devices using provided configuration
     factory = DeviceFactory()
-    devices = factory.create_devices_from_file(args.config, devgroup='mag', zones=['SABINA'])
-    print(f"Created {len(devices)} magnet devices: {list(devices.keys())}")
+    devices = factory.create_devices_from_file(args.config, devgroup='mot')
+    print(f"Created {len(devices)} motor devices: {list(devices.keys())}")
 
     for name, device in devices.items():
         print(f"\n=== Testing {name} ({device.__class__.__name__}) ===")
 
         try:
-            # Get current state and current
-            current = device.get_current()
-            state = device.get_state()
+            # Get current position and status
+            position = device.position()
+            is_moving = device.moving()
+            is_homed = device.ishomed()
+            has_error = device.iserror()
+            limit_status = device.limit()
 
-            print(f"{name} current: {current} A, state: {state}")
+            print(f"{name} position: {position}, moving: {is_moving}, homed: {is_homed}, error: {has_error}, limit: {limit_status}")
 
-            # Subscribe to changes (for demonstration)
-            device.current_rb.subscribe(on_current_change)
-            device.state_rb.subscribe(on_state_change)
+            # Subscribe to position changes (for demonstration)
+            device.user_readback.subscribe(on_position_change)
 
+            # Decode full status
+            status_info = device.decode()
+            print(f"{name} status:\n{status_info}")
+
+        
         except Exception as e:
             print(f"Error testing {name}: {e}")
             import traceback
@@ -73,11 +75,11 @@ if __name__ == "__main__":
     main()
 
 # Example usage with different filters:
-# python magtest.py --config sparc_beamline.yaml --log-level DEBUG
-# python magtest.py --config sparc_beamline.yaml --log-level INFO
+# python mottest.py --config sparc_beamline.yaml --log-level DEBUG
+# python mottest.py --config sparc_beamline.yaml --log-level INFO
 #
 # Or programmatically:
 # from infn_ophyd_hal.device_factory import create_devices_from_beamline_config
-# magnets = create_devices_from_beamline_config('sparc_beamline.yaml', devgroup='mag')
-# for name, mag in magnets.items():
-#     print(f"{name}: current={mag.get_current()}, state={mag.get_state()}")
+# motors = create_devices_from_beamline_config('sparc_beamline.yaml', devgroup='mot')
+# for name, motor in motors.items():
+#     print(f"{name}: position={motor.position()}, moving={motor.moving()}")

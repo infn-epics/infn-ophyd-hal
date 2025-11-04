@@ -274,6 +274,65 @@ else:
     print("Interlock closed - operation not allowed")
 ```
 
+## Device Factory and Filtering
+
+The library includes a powerful `DeviceFactory` that can automatically create device instances from YAML configuration files. It also supports flexible filtering to create only specific devices.
+
+### Basic Factory Usage
+
+```python
+from infn_ophyd_hal.device_factory import create_devices_from_beamline_config
+
+# Create all devices from configuration
+devices = create_devices_from_beamline_config('values.yaml')
+motor1 = devices['MOTOR1']
+motor1.move(10.0)
+```
+
+### Filtering Devices
+
+You can filter devices by name pattern (regex), device group, device type, or any custom configuration field:
+
+```python
+# Create only motors
+motors = create_devices_from_beamline_config('values.yaml', devgroup='mot')
+
+# Create devices with names starting with 'BPM'
+bpms = create_devices_from_beamline_config('values.yaml', name_pattern=r'^BPM')
+
+# Create magnets in a specific zone
+zone_magnets = create_devices_from_beamline_config(
+    'values.yaml',
+    devgroup='mag',
+    zone='beam1'
+)
+
+# Combine multiple filters (AND logic)
+filtered = create_devices_from_beamline_config(
+    'values.yaml',
+    devgroup='mot',
+    name_pattern=r'01',
+    location='hall'
+)
+
+# Use regex for OR logic
+motors_or_magnets = create_devices_from_beamline_config(
+    'values.yaml',
+    devgroup=r'mot|mag'
+)
+```
+
+### Available Filters
+
+- **`name_pattern`**: Regex pattern to match device names
+- **`devgroup`**: Device group (e.g., 'mot', 'mag', 'diag', 'io')
+- **`devtype`**: Device type (e.g., 'tml', 'bpm', 'dante')
+- **Custom filters**: Any key in your config (e.g., `zone='beam1'`, `location='hall'`)
+
+For detailed filtering documentation and examples, see:
+- `DEVICE_FILTERING.md` - Complete filtering guide
+- `example_device_filtering.py` - Comprehensive examples
+
 ## Integration with Beamline Controller
 
 This library is designed to work seamlessly with the `epik8s-beamline-controller`:

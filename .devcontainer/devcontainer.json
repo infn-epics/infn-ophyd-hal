@@ -30,7 +30,9 @@
                 "redhat.vscode-yaml",
                 "ryanluker.vscode-coverage-gutters",
                 "epicsdeb.vscode-epics",
-                "ms-python.black-formatter"
+                "ms-python.black-formatter",
+                "github.copilot",
+                "github.copilot-chat"
             ]
         }
     },

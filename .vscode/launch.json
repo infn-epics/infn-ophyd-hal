@@ -4,6 +4,22 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        {
+            "name": "Python: test device creation by filters",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "example_device_filtering.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/ophyd-env/bin/python",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
+                "EPICS_PVA_NAME_SERVERS": "10.10.6.243",
+                "EPICS_CA_AUTO_ADDR_LIST":"NO"
+            }
+        },
         
         {
             "name": "Python: test io",
@@ -14,8 +30,9 @@
             "args": ["do", "SPARC:SHT:ICP:CATLAS01"],
             "console": "integratedTerminal",
             "python": "${workspaceFolder}/ophyd-env/bin/python",
-            "justMyCode": true,
+            "justMyCode": false,
             "env": {
+                "PYTHONPATH": "${workspaceFolder}",
                 "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
                 "EPICS_CA_AUTO_ADDR_LIST":"NO"
             }
@@ -28,8 +45,9 @@
             "program": "tests/motorsimplepoi.py",
             "console": "integratedTerminal",
             "python": "${workspaceFolder}/ophyd-env/bin/python",
-            "justMyCode": true,
+            "justMyCode": false,
             "env": {
+                "PYTHONPATH": "${workspaceFolder}",
                 "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
                 "EPICS_CA_AUTO_ADDR_LIST":"NO"
             }
@@ -41,57 +59,51 @@
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "program": "tests/bpmtest.py",
+            "args": ["--config", "tests/sparc_beamline.yaml","--log-level","INFO"],
             "console": "integratedTerminal",
             "python": "${workspaceFolder}/ophyd-env/bin/python",
-            "justMyCode": true,
+            "justMyCode": false,
             "env": {
+                "PYTHONPATH": "${workspaceFolder}",
                 "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
+                "EPICS_PVA_NAME_SERVERS": "10.10.6.243",
                 "EPICS_CA_AUTO_ADDR_LIST":"NO"
             }
         },
         {
-            "name": "Python: test PS SIM",
-            "type": "python",
-            "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "program": "tests/testps.py",
-            "console": "integratedTerminal",
-            // "python": "${workspaceFolder}/ophyd-env/bin/python",
-            "justMyCode": true
-            // "env": {
-            //     "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
-            //     "EPICS_CA_AUTO_ADDR_LIST":"NO"
-            // }
-        },
-        {
-            "name": "Python: test PS DANTE",
+            "name": "Python: test MAG",
             "type": "python",
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "program": "tests/magtest.py",
+            "args": ["--config", "tests/sparc_beamline.yaml","--log-level","INFO"],
             "console": "integratedTerminal",
-            "args": ["tests/btfmag_small.yaml"],
-            "justMyCode": true,
-             "env": {
-                 "EPICS_CA_ADDR_LIST": "192.168.36.203", // BTF
-                 "EPICS_CA_AUTO_ADDR_LIST":"NO"
-             }
+            "python": "${workspaceFolder}/ophyd-env/bin/python",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
+                "EPICS_PVA_NAME_SERVERS": "10.10.6.243",
+                "EPICS_CA_AUTO_ADDR_LIST":"NO"
+            }
         },
         {
-            "name": "Python: test PS SPARC DANTE",
+            "name": "Python: test MOT",
             "type": "python",
             "request": "launch",
             "cwd": "${workspaceFolder}",
-            "program": "tests/magtest.py",
+            "program": "tests/mottest.py",
+            "args": ["--config", "tests/sparc_beamline.yaml","--log-level","INFO"],
             "console": "integratedTerminal",
-            "args": ["tests/sparcmag.csv","--regexp","PTLQUA.+","--verbose","1"],
-            "justMyCode": true,
-             "env": {
-                 "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
-                 "EPICS_CA_AUTO_ADDR_LIST":"NO"
-             }
-        }
-
+            "python": "${workspaceFolder}/ophyd-env/bin/python",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "EPICS_CA_ADDR_LIST": "10.10.6.244", // SPARC
+                "EPICS_PVA_NAME_SERVERS": "10.10.6.243",
+                "EPICS_CA_AUTO_ADDR_LIST":"NO"
+            }
+        },
 
 
     ]

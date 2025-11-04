@@ -8,6 +8,7 @@ the device group and type specified in the configuration.
 """
 
 import logging
+import re
 import yaml
 from typing import Dict, Any, Optional, List
 from pathlib import Path
@@ -31,10 +32,14 @@ class DeviceFactory:
         from .ophyd_ps_dantemag import OphydPSDante
         from .unimag_ophyd_ps import OphydPSUnimag
         from .io_basic import OphydDI, OphydDO, OphydAI, OphydAO, OphydRTD
-        
+        from .vac_basic import OphydVPC, OphydVGC
         # Register motor devices
         self._device_map[('mot', 'tml')] = OphydTmlMotor
         self._device_map[('mot', 'motor')] = OphydTmlMotor
+        
+        # Register vacuum devices
+        self._device_map[('vac', 'ipcmini')] = OphydVPC
+        self._device_map[('vac', 'tpg300')] = OphydVGC
         
         # Register BPM/diagnostic devices
         self._device_map[('diag', 'bpm')] = SppOphydBpm
@@ -45,7 +50,7 @@ class DeviceFactory:
         self._device_map[('mag', 'sim')] = OphydPSSim
         self._device_map[('mag', 'dante')] = OphydPSDante
         self._device_map[('mag', 'unimag')] = OphydPSUnimag
-        self._device_map[('mag', 'generic')] = OphydPS
+        self._device_map[('mag', 'generic')] = OphydPSUnimag
         
         # Register IO devices
         self._device_map[('io', 'rtd')] = OphydRTD
@@ -145,6 +150,106 @@ class DeviceFactory:
         """
         return list(self._device_map.keys())
     
+    def _matches_filters(self, device_name: str, device_config: Dict[str, Any],
+                        name_pattern: Optional[str] = None,
+                        devtype: Optional[str] = None,
+                        devgroup: Optional[str] = None,
+                        **custom_filters) -> bool:
+        """
+        Check if a device matches the specified filters.
+        
+        Args:
+            device_name: Name of the device
+            device_config: Device configuration dictionary
+            name_pattern: Regex pattern to match device name (optional)
+            devtype: Device type to match (optional, exact match or regex)
+            devgroup: Device group to match (optional, exact match or regex)
+            **custom_filters: Additional key-value filters (e.g., zone='beam1')
+                             Supports regex patterns if value starts with 'regex:'
+        
+        Returns:
+            True if device matches all specified filters, False otherwise
+        """
+        # Check name pattern
+        if name_pattern:
+            try:
+                if not re.search(name_pattern, device_name, re.IGNORECASE):
+                    return False
+            except re.error as e:
+                self.logger.warning(f"Invalid regex pattern '{name_pattern}': {e}")
+                return False
+        
+        # Check devtype
+        if devtype:
+            device_devtype = device_config.get('devtype', '')
+            try:
+                # Try as regex first
+                if not re.search(devtype, device_devtype, re.IGNORECASE):
+                    # Also try exact match (case-insensitive)
+                    if device_devtype.lower() != devtype.lower():
+                        return False
+            except re.error:
+                # If regex fails, do exact match
+                if device_devtype.lower() != devtype.lower():
+                    return False
+        
+        # Check devgroup
+        if devgroup:
+            device_devgroup = device_config.get('devgroup', '')
+            try:
+                # Try as regex first
+                if not re.search(devgroup, device_devgroup, re.IGNORECASE):
+                    # Also try exact match (case-insensitive)
+                    if device_devgroup.lower() != devgroup.lower():
+                        return False
+            except re.error:
+                # If regex fails, do exact match
+                if device_devgroup.lower() != devgroup.lower():
+                    return False
+        
+        # Check custom filters (e.g., zone, location, etc.)
+        for key, value in custom_filters.items():
+            if value is None:
+                continue
+            
+            config_value = device_config.get(key, '')
+            if not config_value:
+                return False
+            # Convert to string for comparison
+            if not isinstance(config_value, str):
+                config_value = str(config_value)
+            
+            # Check if value is a regex pattern (prefixed with 'regex:')
+            if isinstance(value, str) and value.startswith('regex:'):
+                pattern = value[6:]  # Remove 'regex:' prefix
+                try:
+                    if not re.search(pattern, config_value, re.IGNORECASE):
+                        return False
+                except re.error as e:
+                    self.logger.warning(f"Invalid regex pattern '{pattern}' for key '{key}': {e}")
+                    return False
+            else:
+                # Try regex match first
+                try:
+                    if isinstance(value, list):
+                        matched = False
+                        for v in value:
+                            if re.search(str(v), config_value, re.IGNORECASE):
+                                matched = True
+                                break
+                        if not matched:
+                            return False
+                    if not re.search(str(value), config_value, re.IGNORECASE):
+                        # Also try exact match (case-insensitive)
+                        if config_value.lower() != str(value).lower():
+                            return False
+                except re.error:
+                    # If regex fails, do exact match
+                    if config_value.lower() != str(value).lower():
+                        return False
+        
+        return True
+    
     def load_beamline_config(self, config_path: str) -> Dict:
         """
         Load beamline configuration from YAML file.
@@ -164,15 +269,37 @@ class DeviceFactory:
             self.logger.error(f"Failed to load configuration from {config_path}: {e}")
             raise
     
-    def create_devices_from_config(self, config: Dict) -> Dict[str, object]:
+    def create_devices_from_config(self, config: Dict,
+                                   name_pattern: Optional[str] = None,
+                                   devtype: Optional[str] = None,
+                                   devgroup: Optional[str] = None,
+                                   **custom_filters) -> Dict[str, object]:
         """
-        Create all Ophyd devices from beamline configuration.
+        Create Ophyd devices from beamline configuration with optional filtering.
         
         Args:
             config: Beamline configuration dictionary (typically from values.yaml)
-            
+            name_pattern: Regex pattern to filter devices by name (optional)
+            devtype: Filter by device type (exact match or regex) (optional)
+            devgroup: Filter by device group (exact match or regex) (optional)
+            **custom_filters: Additional filters (e.g., zone='beam1', location='hall')
+                             Prefix value with 'regex:' for regex matching
+        
         Returns:
             Dictionary mapping device names to Ophyd device instances
+            
+        Examples:
+            # Create only motors
+            factory.create_devices_from_config(config, devgroup='mot')
+            
+            # Create devices with names starting with 'BPM'
+            factory.create_devices_from_config(config, name_pattern=r'^BPM')
+            
+            # Create magnets in zone 'beam1'
+            factory.create_devices_from_config(config, devgroup='mag', zone='beam1')
+            
+            # Create devices with names containing digits
+            factory.create_devices_from_config(config, name_pattern=r'\d+')
         """
         devices = {}
         
@@ -183,6 +310,19 @@ class DeviceFactory:
         if not iocs:
             self.logger.warning("No IOCs found in configuration")
             return devices
+        
+        # Log filter information
+        if name_pattern or devtype or devgroup or custom_filters:
+            filter_info = []
+            if name_pattern:
+                filter_info.append(f"name_pattern='{name_pattern}'")
+            if devtype:
+                filter_info.append(f"devtype='{devtype}'")
+            if devgroup:
+                filter_info.append(f"devgroup='{devgroup}'")
+            for key, value in custom_filters.items():
+                filter_info.append(f"{key}='{value}'")
+            self.logger.info(f"Applying filters: {', '.join(filter_info)}")
         
         self.logger.info(f"Processing {len(iocs)} IOC configurations...")
         
@@ -196,11 +336,11 @@ class DeviceFactory:
                 self.logger.debug(f"Skipping disabled IOC: {ioc_name}")
                 continue
             
-            # Get device group and type
-            devgroup = ioc_config.get('devgroup')
-            devtype = ioc_config.get('devtype')
+            # Get device group and type from IOC config
+            ioc_devgroup = ioc_config.get('devgroup')
+            ioc_devtype = ioc_config.get('devtype')
             
-            if not devgroup:
+            if not ioc_devgroup:
                 self.logger.debug(f"IOC {ioc_name} has no devgroup, skipping")
                 continue
             
@@ -218,21 +358,28 @@ class DeviceFactory:
                         if not device_name:
                             continue
                         
+                        # Merge IOC config with device config for filter checking
+                        merged_config = ioc_config.copy()
+                        merged_config['iocname'] = ioc_name
+                        merged_config.update(device_config)
+                        
+                        # Apply filters
+                        if not self._matches_filters(device_name, merged_config,
+                                                     name_pattern, devtype, devgroup,
+                                                     **custom_filters):
+                            self.logger.debug(f"Device {device_name} filtered out")
+                            continue
+                        
                         # Construct PV prefix
                         if 'iocroot' in ioc_config:
                             pv_prefix = f"{ioc_prefix}:{ioc_config['iocroot']}:{device_name}"
                         else:
                             pv_prefix = f"{ioc_prefix}:{device_name}"
                         
-                        # Merge IOC config with device config
-                        merged_config = ioc_config.copy()
-                        merged_config['iocname'] = ioc_name
-                        merged_config.update(device_config)
-                        
                         # Create Ophyd device
                         ophyd_device = self.create_device(
-                            devgroup=devgroup,
-                            devtype=devtype,
+                            devgroup=ioc_devgroup,
+                            devtype=ioc_devtype,
                             prefix=pv_prefix,
                             name=device_name,
                             config=merged_config
@@ -259,16 +406,23 @@ class DeviceFactory:
                             devices[device_key] = ophyd_device
                             self.logger.info(
                                 f"Created device: {device_key} "
-                                f"({ioc_name}/{devgroup}/{devtype} prefix={pv_prefix})"
+                                f"({ioc_name}/{ioc_devgroup}/{ioc_devtype} prefix={pv_prefix})"
                             )
                 else:
                     # Single device IOC
+                    # Apply filters
+                    if not self._matches_filters(ioc_name, ioc_config,
+                                                 name_pattern, devtype, devgroup,
+                                                 **custom_filters):
+                        self.logger.debug(f"Device {ioc_name} filtered out")
+                        continue
+                    
                     pv_prefix = ioc_prefix
                     
                     # Create Ophyd device
                     ophyd_device = self.create_device(
-                        devgroup=devgroup,
-                        devtype=devtype,
+                        devgroup=ioc_devgroup,
+                        devtype=ioc_devtype,
                         prefix=pv_prefix,
                         name=ioc_name,
                         config=ioc_config
@@ -277,8 +431,10 @@ class DeviceFactory:
                     if ophyd_device:
                         devices[ioc_name] = ophyd_device
                         self.logger.info(
-                            f"Created device: {ioc_name} ({devgroup}/{devtype})"
+                                f"Created device: {ioc_name} "
+                                f"({ioc_name}/{ioc_devgroup}/{ioc_devtype} prefix={pv_prefix})"
                         )
+                       
                         
             except Exception as e:
                 self.logger.error(
@@ -289,34 +445,64 @@ class DeviceFactory:
         self.logger.info(f"Created {len(devices)} Ophyd devices from configuration")
         return devices
     
-    def create_devices_from_file(self, config_path: str) -> Dict[str, object]:
+    def create_devices_from_file(self, config_path: str,
+                                 name_pattern: Optional[str] = None,
+                                 devtype: Optional[str] = None,
+                                 devgroup: Optional[str] = None,
+                                 **custom_filters) -> Dict[str, object]:
         """
-        Create all Ophyd devices from beamline configuration file.
+        Create Ophyd devices from beamline configuration file with optional filtering.
         
         Args:
             config_path: Path to beamline YAML configuration file
+            name_pattern: Regex pattern to filter devices by name (optional)
+            devtype: Filter by device type (exact match or regex) (optional)
+            devgroup: Filter by device group (exact match or regex) (optional)
+            **custom_filters: Additional filters (e.g., zone='beam1', location='hall')
             
         Returns:
             Dictionary mapping device names to Ophyd device instances
         """
         config = self.load_beamline_config(config_path)
-        return self.create_devices_from_config(config)
+        return self.create_devices_from_config(config, name_pattern, devtype, 
+                                              devgroup, **custom_filters)
 
 
-def create_devices_from_beamline_config(config_path: str) -> Dict[str, object]:
+def create_devices_from_beamline_config(config_path: str,
+                                        name_pattern: Optional[str] = None,
+                                        devtype: Optional[str] = None,
+                                        devgroup: Optional[str] = None,
+                                        **custom_filters) -> Dict[str, object]:
     """
     Convenience function to create devices from a beamline configuration file.
     
     Args:
         config_path: Path to beamline YAML configuration file
+        name_pattern: Regex pattern to filter devices by name (optional)
+        devtype: Filter by device type (exact match or regex) (optional)
+        devgroup: Filter by device group (exact match or regex) (optional)
+        **custom_filters: Additional filters (e.g., zone='beam1')
         
     Returns:
         Dictionary mapping device names to Ophyd device instances
     
-    Example:
+    Examples:
+        >>> # Create all devices
         >>> devices = create_devices_from_beamline_config('values.yaml')
         >>> motor1 = devices['MOTOR1']
         >>> motor1.user_readback.get()
+        
+        >>> # Create only motors
+        >>> motors = create_devices_from_beamline_config('values.yaml', devgroup='mot')
+        
+        >>> # Create devices with names matching pattern
+        >>> bpms = create_devices_from_beamline_config('values.yaml', name_pattern=r'^BPM')
+        
+        >>> # Create magnets in specific zone
+        >>> magnets = create_devices_from_beamline_config('values.yaml', 
+        ...                                               devgroup='mag', 
+        ...                                               zone='beam1')
     """
     factory = DeviceFactory()
-    return factory.create_devices_from_file(config_path)
+    return factory.create_devices_from_file(config_path, name_pattern, devtype,
+                                           devgroup, **custom_filters)
