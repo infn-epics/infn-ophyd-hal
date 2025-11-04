@@ -1,4 +1,3 @@
-__version__ = "2.12.2"
 
 from .epik8s_device import epik8sDevice
 from .tml_ophyd_motor import OphydTmlMotor

@@ -36,12 +36,13 @@ class OphydPSUnimag(OphydPS, epik8sDevice):
     ):
         # Initialize common PS base (limits, bookkeeping)
         OphydPS.__init__(self, name=name, min_current=min, max_current=max, verbose=verbose, **kwargs)
-
+        if read_attrs is None:
+            read_attrs = ['current_rb', 'state_rb']
         # Initialize ophyd Device with this prefix
         epik8sDevice.__init__(
             self,
             prefix,
-            read_attrs=None,
+            read_attrs=read_attrs,
             configuration_attrs=None,
             name=name,
             parent=None,
@@ -54,8 +55,8 @@ class OphydPSUnimag(OphydPS, epik8sDevice):
         self._state: ophyd_ps_state = ophyd_ps_state.UKNOWN
 
         # Subscriptions to keep cache in sync
-        self.current_rb.subscribe(self._on_current_change_rb)
-        self.state_rb.subscribe(self._on_state_change_rb)
+        # self.current_rb.subscribe(self._on_current_change_rb)
+        # self.state_rb.subscribe(self._on_state_change_rb)
 
         # Prime initial values (if connected)
         try:
@@ -104,10 +105,10 @@ class OphydPSUnimag(OphydPS, epik8sDevice):
         self.state.put(self._encode_state(st_enum))
 
     def get_current(self) -> float:
-        return self._current
+        return self.current_rb.get()
 
     def get_state(self) -> ophyd_ps_state:
-        return self._state
+        return self.state_rb.get()
 
     # ----------------------
     # Helpers for state encoding/decoding
