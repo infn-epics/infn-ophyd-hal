@@ -36,8 +36,7 @@ class OphydPSUnimag(OphydPS, epik8sDevice):
     ):
         # Initialize common PS base (limits, bookkeeping)
         OphydPS.__init__(self, name=name, min_current=min, max_current=max, verbose=verbose, **kwargs)
-        if read_attrs is None:
-            read_attrs = ['current_rb', 'state_rb']
+        read_attrs = ['current_rb', 'state_rb']
         # Initialize ophyd Device with this prefix
         epik8sDevice.__init__(
             self,
