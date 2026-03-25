@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-__version__ = "2.13.0"
+__version__ = "2.14.0"
 
 setup(
     name="infn_ophyd_hal",

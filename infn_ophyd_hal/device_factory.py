@@ -25,6 +25,7 @@ class DeviceFactory:
     
     def _register_device_types(self):
         """Register all available EPIK8S device types."""
+        from .asyn_ophyd_motor import OphydAsynMotor, OphydMotorSim
         from .tml_ophyd_motor import OphydTmlMotor
         from .spp_ophyd_bpm import SppOphydBpm
         from .ophyd_ps import OphydPS
@@ -33,33 +34,48 @@ class DeviceFactory:
         from .unimag_ophyd_ps import OphydPSUnimag
         from .io_basic import OphydDI, OphydDO, OphydAI, OphydAO, OphydRTD
         from .vac_basic import OphydVPC, OphydVGC
-        # Register motor devices
+        from .sim_devices import (
+            OphydBpmSim, OphydDISim, OphydDOSim, OphydAISim, OphydAOSim,
+            OphydRTDSim, OphydVPCSim, OphydVGCSim,
+        )
+
+        # Register motor devices — asyn motor is the default for mot group
+        self._device_map[('mot', 'asyn')] = OphydAsynMotor
+        self._device_map[('mot', 'generic')] = OphydAsynMotor
+        self._device_map[('mot', 'motor')] = OphydAsynMotor
         self._device_map[('mot', 'tml')] = OphydTmlMotor
-        self._device_map[('mot', 'motor')] = OphydTmlMotor
         self._device_map[('mot', 'technosoft-asyn')] = OphydTmlMotor
-        
+        self._device_map[('mot', 'sim')] = OphydMotorSim
+
         # Register vacuum devices
         self._device_map[('vac', 'ipcmini')] = OphydVPC
         self._device_map[('vac', 'tpg300')] = OphydVGC
-        
+        self._device_map[('vac', 'sim')] = OphydVPCSim
+
         # Register BPM/diagnostic devices
         self._device_map[('diag', 'bpm')] = SppOphydBpm
         self._device_map[('diag', 'libera-spe')] = SppOphydBpm
         self._device_map[('diag', 'libera-sppp')] = SppOphydBpm
-        
+        self._device_map[('diag', 'sim')] = OphydBpmSim
+
         # Register power supply devices
         self._device_map[('mag', 'sim')] = OphydPSSim
         self._device_map[('mag', 'dante')] = OphydPSDante
         self._device_map[('mag', 'unimag')] = OphydPSUnimag
         self._device_map[('mag', 'generic')] = OphydPSUnimag
         self._device_map[('mag', 'haz-ser')] = OphydPSUnimag
-        
+
         # Register IO devices
         self._device_map[('io', 'rtd')] = OphydRTD
         self._device_map[('io', 'di')] = OphydDI
         self._device_map[('io', 'do')] = OphydDO
         self._device_map[('io', 'ai')] = OphydAI
         self._device_map[('io', 'ao')] = OphydAO
+        self._device_map[('io', 'sim-rtd')] = OphydRTDSim
+        self._device_map[('io', 'sim-di')] = OphydDISim
+        self._device_map[('io', 'sim-do')] = OphydDOSim
+        self._device_map[('io', 'sim-ai')] = OphydAISim
+        self._device_map[('io', 'sim-ao')] = OphydAOSim
         
         self.logger.info(f"Registered {len(self._device_map)} device types")
     
