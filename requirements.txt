@@ -6,3 +6,4 @@ packaging
 pyepics
 pyparsing
 pyyaml
+requests

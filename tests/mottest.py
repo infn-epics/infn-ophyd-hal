@@ -49,8 +49,8 @@ def main():
 
         try:
             # Get current position and status
-            position = device.position()
-            is_moving = device.moving()
+            position = device.position
+            is_moving = device.moving
             is_homed = device.ishomed()
             has_error = device.iserror()
             limit_status = device.limit()
@@ -82,4 +82,4 @@ if __name__ == "__main__":
 # from infn_ophyd_hal.device_factory import create_devices_from_beamline_config
 # motors = create_devices_from_beamline_config('sparc_beamline.yaml', devgroup='mot')
 # for name, motor in motors.items():
-#     print(f"{name}: position={motor.position()}, moving={motor.moving()}")
+#     print(f"{name}: position={motor.position}, moving={motor.moving}")

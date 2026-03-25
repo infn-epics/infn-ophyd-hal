@@ -9,6 +9,7 @@ from .unimag_ophyd_ps import OphydPSUnimag
 from .io_basic import OphydDI, OphydDO, OphydAI, OphydAO, OphydRTD
 from .vac_basic import OphydVPC, OphydVGC
 from .device_factory import DeviceFactory, create_devices_from_beamline_config
+from .channelfinder_client import ChannelFinderClient
 
 PowerSupplyFactory.register_type("sim", OphydPSSim)
 PowerSupplyFactory.register_type("dante", OphydPSDante)

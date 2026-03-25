@@ -59,13 +59,13 @@ from infn_ophyd_hal import OphydTmlMotor
 motor = OphydTmlMotor('SPARC:MOTOR:X', name='x_motor')
 
 # Read current position
-position = motor.position()
+position = motor.position
 
 # Move to new position
 motor.move(10.5, wait=True)
 
 # Check if moving
-if motor.moving():
+if motor.moving:
     print("Motor is moving...")
 
 # Stop motor
@@ -348,7 +348,7 @@ class MyBeamlineTask(TaskBase):
     def run(self):
         while self.running:
             # Use device methods
-            position = self.motor.position()
+            position = self.motor.position
             current = self.magnet.get_current()
             
             # Your control logic here

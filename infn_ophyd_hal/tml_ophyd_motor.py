@@ -67,6 +67,12 @@ class OphydTmlMotor(epik8sDevice, PositionerBase):
         self.user_readback.subscribe(self._on_user_readback_change)
         self.mot_msta.subscribe(self._on_mot_msta_change)
 
+        # Soft limits from config
+        cfg = kwargs.get('config', {}) or {}
+        motor_cfg = cfg.get('motor', {}) or {}
+        self._low_limit = motor_cfg.get('dllm', float('-inf'))
+        self._high_limit = motor_cfg.get('dhlm', float('inf'))
+
         # Initial connection check
         self.mot_stat_value = self.mot_stat.get()
         self.mot_msta_value = self.mot_msta.get()
@@ -171,6 +177,7 @@ class OphydTmlMotor(epik8sDevice, PositionerBase):
     def dir(self):
         return self.mot_msta.get() & 0x1
     
+    @property
     def moving(self):
         '''Whether or not the motor is moving
 
@@ -210,9 +217,26 @@ class OphydTmlMotor(epik8sDevice, PositionerBase):
 
         self.mot_actx_sp.put(STOP)
 
+    @property
     def egu(self):
         return "ustep"
-    
+
+    @property
+    def limits(self):
+        return (self._low_limit, self._high_limit)
+
+    @property
+    def precision(self):
+        return 0
+
+    def check_value(self, pos):
+        '''Check that the position is within the soft limits'''
+        low, high = self.limits
+        if low != float('-inf') and pos < low:
+            raise ValueError(f'{self.name} position {pos} below low limit {low}')
+        if high != float('inf') and pos > high:
+            raise ValueError(f'{self.name} position {pos} above high limit {high}')
+
     def move(self, position, wait=True,timeout=120, **kwargs):
         '''Move to a specified position, optionally waiting for motion to
         complete.
@@ -247,7 +271,7 @@ class OphydTmlMotor(epik8sDevice, PositionerBase):
             position = self.poi2pos(posstr)
             if(position<0):
                 raise Exception("BAD POI "+posstr)
-        if position == self.position():
+        if position == self.position:
             logging.info(f"already at {position}")
             return MoveStatus(self,position)
         
@@ -272,6 +296,7 @@ class OphydTmlMotor(epik8sDevice, PositionerBase):
         # Set the motor to the desired position
         return 
     
+    @property
     def position(self):
         return self.user_readback.get()
 
@@ -289,7 +314,7 @@ class OphydTmlMotor(epik8sDevice, PositionerBase):
     def set(self, position,wait=True,timeout=120):
         if isinstance(position, str):
             position = self.poi2pos(position)
-        if (position == self.position()):
+        if (position == self.position):
             logger.info(f"already in {position}")
 
             return MoveStatus(self,position)
@@ -378,7 +403,7 @@ class OphydTmlMotor(epik8sDevice, PositionerBase):
         return
     
     def get_pos(self,poi=False):
-        pos=self.position()
+        pos=self.position
         if poi:
             return {'pos':pos,"name":self.pos2poi(pos)}
         return pos

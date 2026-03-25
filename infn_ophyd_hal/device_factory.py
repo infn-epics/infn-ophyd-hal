@@ -36,6 +36,7 @@ class DeviceFactory:
         # Register motor devices
         self._device_map[('mot', 'tml')] = OphydTmlMotor
         self._device_map[('mot', 'motor')] = OphydTmlMotor
+        self._device_map[('mot', 'technosoft-asyn')] = OphydTmlMotor
         
         # Register vacuum devices
         self._device_map[('vac', 'ipcmini')] = OphydVPC
@@ -51,6 +52,7 @@ class DeviceFactory:
         self._device_map[('mag', 'dante')] = OphydPSDante
         self._device_map[('mag', 'unimag')] = OphydPSUnimag
         self._device_map[('mag', 'generic')] = OphydPSUnimag
+        self._device_map[('mag', 'haz-ser')] = OphydPSUnimag
         
         # Register IO devices
         self._device_map[('io', 'rtd')] = OphydRTD
